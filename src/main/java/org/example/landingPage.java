@@ -1,19 +1,19 @@
 package org.example;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
+import java.io.*;
+
+//green#84b477, red#d85259, #e8ced6, blue#b7caef, yellow#ffe786
 
 public class landingPage extends JFrame {
 
-    public landingPage() {
+    public landingPage() throws IOException, FontFormatException {
         setSize(1920, 1080);
         setTitle("Para!");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-
-        JPanel favourites = new JPanel();
-        favourites.setPreferredSize(new Dimension(256, 960));
-        favourites.setBackground(Color.DARK_GRAY);
 
         JPanel mainPage = new JPanel();
         mainPage.setPreferredSize(new Dimension(1644, 960));
@@ -21,43 +21,109 @@ public class landingPage extends JFrame {
 
         JPanel head = new JPanel();
         head.setPreferredSize(new Dimension(1181, 160));
-        head.setBackground(Color.BLACK);
+        head.setOpaque(false);
+
+        ImageIcon img = new ImageIcon("ProjectFiles/Para.png");
+        Image resized = img.getImage().getScaledInstance(175, 175, Image.SCALE_SMOOTH);
+        ImageIcon logo = new ImageIcon(resized);
+        JLabel logoLabel = new JLabel(logo, SwingConstants.CENTER);
+
+        head.add(logoLabel, BorderLayout.CENTER);
 
         JPanel center = new JPanel();
-        center.setPreferredSize(new Dimension(1181, 848));
-        center.setBackground(Color.GRAY);
+
+        JPanel contentPane = new JPanel();
+        contentPane.setPreferredSize(new Dimension(1000, 800));
+        contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
+
+        JPanel textContainer = new JPanel();
+        textContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 150, 50));
+        textContainer.setBackground(new Color(0x84b477));
+        textContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel wcContainer = new JPanel();
+        wcContainer.setLayout(new BoxLayout(wcContainer, BoxLayout.Y_AXIS));
+        wcContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
+        wcContainer.setBackground(new Color(0x84b477));
+
+        JLabel wcText = new JLabel("Welcome Ken!");
+        wcText.setFont(loadCustomFont("ProjectFiles/DMSansItalic.ttf", 20f));
+        wcText.setForeground(new Color(0xffe786));
+        JLabel wcQuestion = new JLabel();
+        wcQuestion.setText("<html>Where do you want<br>to go?</html>");
+        wcQuestion.setFont(loadCustomFont("ProjectFiles/DMSansBold.ttf", 40f));
+
+        wcContainer.add(wcText);
+        wcContainer.add(Box.createVerticalStrut(20));
+        wcContainer.add(wcQuestion);
 
         JPanel inputContainer = new JPanel();
-        inputContainer.setPreferredSize(new Dimension(1181, 300));
-        inputContainer.setOpaque(false);
-        inputContainer.setLayout(new FlowLayout(FlowLayout.LEFT, 40, 100));
-
-        JPanel divider = new JPanel();
-        divider.setPreferredSize(new Dimension(30, 55));
-        divider.setOpaque(false);
-
-        JButton searchButton = new JButton("Search");
-        searchButton.setPreferredSize(new Dimension(81, 40));
-
-
-
-        JTextField destination = new JTextField();
-        destination.setPreferredSize(new Dimension(383, 55));
+        inputContainer.setLayout(new BoxLayout(inputContainer, BoxLayout.Y_AXIS));
+        inputContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
+        inputContainer.setBackground(new Color(0x84b477));
 
         JTextField currentLocation = new JTextField();
-        currentLocation.setPreferredSize(new Dimension(383, 55));
+        currentLocation.setPreferredSize(new Dimension(250, 40));
+        JTextField destination = new JTextField();
+        destination.setPreferredSize(new Dimension(250, 40));
 
-        inputContainer.add(destination);
         inputContainer.add(currentLocation);
-        inputContainer.add(divider);
-        inputContainer.add(searchButton);
+        inputContainer.add(Box.createVerticalStrut(20));
+        inputContainer.add(destination);
 
-        center.add(inputContainer);
+        textContainer.add(wcContainer);
+        textContainer.add(inputContainer);
+
+        JLabel resultLabel = new JLabel("We found 4 routes!");
+        resultLabel.setFont(loadCustomFont("ProjectFiles/DMSansItalic.ttf", 20f));
+        resultLabel.setForeground(new Color(0xd85259));
+        resultLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel routeContainer = new JPanel();
+        routeContainer.setLayout(new GridLayout(2, 2, 25, 25));
+        routeContainer.setPreferredSize(new Dimension(1200, 400));
+        routeContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel route1 = new JPanel();
+        route1.setPreferredSize(new Dimension(250, 100));
+        route1.setBackground(Color.GRAY);
+
+        JPanel route2 = new JPanel();
+        route2.setPreferredSize(new Dimension(250, 100));
+        route2.setBackground(Color.GRAY);
+
+        JPanel route3 = new JPanel();
+        route3.setPreferredSize(new Dimension(250, 100));
+        route3.setBackground(Color.GRAY);
+
+        JPanel route4 = new JPanel();
+        route4.setPreferredSize(new Dimension(250, 100));
+        route4.setBackground(Color.GRAY);
+
+        routeContainer.add(route1);
+        routeContainer.add(route2);
+        routeContainer.add(route3);
+        routeContainer.add(route4);
+
+
+        contentPane.add(textContainer);
+        contentPane.add(Box.createVerticalStrut(30));
+        contentPane.add(resultLabel);
+        contentPane.add(Box.createVerticalStrut(30));
+        contentPane.add(routeContainer);
+        center.add(contentPane);
         mainPage.add(center, BorderLayout.CENTER);
         mainPage.add(head, BorderLayout.NORTH);
-        add(favourites, BorderLayout.WEST);
         add(mainPage, BorderLayout.CENTER);
 
         setVisible(true);
+    }
+
+    private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
+        Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
+
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        ge.registerFont(font);
+        return font.deriveFont(size);
     }
 }

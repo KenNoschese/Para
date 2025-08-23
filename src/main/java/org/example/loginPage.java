@@ -2,8 +2,8 @@ package org.example;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
+import java.awt.event.*;
+import java.io.IOException;
 
 public class loginPage extends JFrame {
 
@@ -20,7 +20,7 @@ public class loginPage extends JFrame {
         mainPanel.setBackground(new Color(245, 245, 245));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
 
-        ImageIcon img = new ImageIcon("Para.png");
+        ImageIcon img = new ImageIcon("ProjectFiles/Para.png");
         Image resized = img.getImage().getScaledInstance(250, 250, Image.SCALE_SMOOTH);
         ImageIcon logo = new ImageIcon(resized);
         JLabel logoLabel = new JLabel(logo, SwingConstants.CENTER);
@@ -115,7 +115,22 @@ public class loginPage extends JFrame {
         button.setBorder(BorderFactory.createEmptyBorder());
         button.setFocusPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                landingPage landingFrame = null;
+                try {
+                    landingFrame = new landingPage();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                } catch (FontFormatException ex) {
+                    throw new RuntimeException(ex);
+                }
+                landingFrame.setVisible(true);
 
+
+            }
+        });
         return button;
     }
 
