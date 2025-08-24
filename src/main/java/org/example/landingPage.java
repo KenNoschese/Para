@@ -1,14 +1,12 @@
 package org.example;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
 import java.io.*;
 
 //green#84b477, red#d85259, #e8ced6, blue#b7caef, yellow#ffe786
 
 public class landingPage extends JFrame {
-
     public landingPage() throws IOException, FontFormatException {
         setSize(1920, 1080);
         setTitle("Para!");
@@ -36,7 +34,7 @@ public class landingPage extends JFrame {
         contentPane.setPreferredSize(new Dimension(1000, 800));
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
 
-        JPanel textContainer = new JPanel();
+        roundPanel textContainer = new roundPanel(30);
         textContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 150, 50));
         textContainer.setBackground(new Color(0x84b477));
         textContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -84,19 +82,19 @@ public class landingPage extends JFrame {
         routeContainer.setPreferredSize(new Dimension(1200, 400));
         routeContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel route1 = new JPanel();
+        roundPanel route1 = new roundPanel(30);
         route1.setPreferredSize(new Dimension(250, 100));
         route1.setBackground(Color.GRAY);
 
-        JPanel route2 = new JPanel();
+        roundPanel route2 = new roundPanel(30);
         route2.setPreferredSize(new Dimension(250, 100));
         route2.setBackground(Color.GRAY);
 
-        JPanel route3 = new JPanel();
+        roundPanel route3 = new roundPanel(30);
         route3.setPreferredSize(new Dimension(250, 100));
         route3.setBackground(Color.GRAY);
 
-        JPanel route4 = new JPanel();
+        roundPanel route4 = new roundPanel(30);
         route4.setPreferredSize(new Dimension(250, 100));
         route4.setBackground(Color.GRAY);
 
@@ -126,4 +124,5 @@ public class landingPage extends JFrame {
         ge.registerFont(font);
         return font.deriveFont(size);
     }
+
 }

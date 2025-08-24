@@ -3,11 +3,12 @@ package org.example;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.io.IOException;
 
 public class loginPage extends JFrame {
 
-    public loginPage() {
+    public loginPage() throws IOException, FontFormatException {
         setTitle("Para!");
         setSize(1920, 1080);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -36,12 +37,12 @@ public class loginPage extends JFrame {
 
 
         JLabel titleLabel = new JLabel("Create an account", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setFont(loadCustomFont("ProjectFiles/DMSansBold.ttf", 28f));
         titleLabel.setForeground(Color.BLACK);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("Enter a username and password", SwingConstants.CENTER);
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        subtitleLabel.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         subtitleLabel.setForeground(Color.GRAY);
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -50,22 +51,22 @@ public class loginPage extends JFrame {
 
         JButton signUpButton = createSignUpButton();
         JLabel orLabel = new JLabel("or", SwingConstants.CENTER);
-        orLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        orLabel.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 14f));
         orLabel.setForeground(Color.GRAY);
         orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JButton loginButton = createLoginButton();
 
         formContent.add(titleLabel);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        formContent.add(Box.createVerticalStrut(30));
         formContent.add(subtitleLabel);
-        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        formContent.add(Box.createVerticalStrut(30));
         formContent.add(usernameField);
-
+        formContent.add(Box.createVerticalStrut(30));
         formContent.add(passwordField);
-
+        formContent.add(Box.createVerticalStrut(30));
         formContent.add(signUpButton);
-        signUpButton.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+
         formContent.add(orLabel);
 
         formContent.add(loginButton);
@@ -79,11 +80,11 @@ public class loginPage extends JFrame {
     }
 
 
-    private JTextField createTextField() {
+    private JTextField createTextField() throws IOException, FontFormatException {
         JTextField textField = new JTextField();
         textField.setMaximumSize(new Dimension(400, 45));
         textField.setPreferredSize(new Dimension(400, 45));
-        textField.setFont(new Font("Arial", Font.PLAIN, 16));
+        textField.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         textField.setForeground(Color.GRAY);
         textField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -91,11 +92,11 @@ public class loginPage extends JFrame {
         return textField;
     }
 
-    private JButton createSignUpButton() {
+    private JButton createSignUpButton() throws IOException, FontFormatException {
         JButton button = new JButton("Sign Up");
         button.setMaximumSize(new Dimension(400, 45));
         button.setPreferredSize(new Dimension(400, 45));
-        button.setFont(new Font("Arial", Font.BOLD, 16));
+        button.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         button.setForeground(Color.WHITE);
         button.setBackground(Color.BLACK);
         button.setBorder(BorderFactory.createEmptyBorder());
@@ -132,6 +133,14 @@ public class loginPage extends JFrame {
             }
         });
         return button;
+    }
+
+    private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
+        Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
+
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        ge.registerFont(font);
+        return font.deriveFont(size);
     }
 
 }
