@@ -21,6 +21,7 @@ public class loginPage extends JFrame {
         mainPanel.setBackground(new Color(245, 245, 245));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
 
+
         ImageIcon img = new ImageIcon("ProjectFiles/Para.png");
         Image resized = img.getImage().getScaledInstance(250, 250, Image.SCALE_SMOOTH);
         ImageIcon logo = new ImageIcon(resized);
