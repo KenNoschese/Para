@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.ui.landingPage;
+
 import java.awt.*;
 import java.io.IOException;
 

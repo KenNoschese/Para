@@ -1,20 +1,18 @@
-package org.example;
+package org.example.components;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-public class roundButton extends JButton {
+public class roundTextField extends JTextField {
 
-    private int arcWidth = 30;
-    private int arcHeight = 30;
+    private int arcWidth = 20;
+    private int arcHeight = 20;
 
-    public roundButton(String label) {
-        super(label);
-        setContentAreaFilled(false);
-        setFocusPainted(false);
-        setBorderPainted(false);
+    public roundTextField(int columns) {
+        super(columns);
         setOpaque(false);
+        setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
     }
 
     @Override
@@ -22,7 +20,6 @@ public class roundButton extends JButton {
         Graphics2D g2 = (Graphics2D) g.create();
 
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
         g2.setColor(getBackground());
         g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arcWidth, arcHeight));
 
@@ -30,6 +27,14 @@ public class roundButton extends JButton {
         g2.dispose();
     }
 
+    @Override
+    protected void paintBorder(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(getForeground());
+        g2.draw(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), arcWidth, arcHeight));
+        g2.dispose();
+    }
 
     public void setArc(int width, int height) {
         this.arcWidth = width;

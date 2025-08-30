@@ -1,4 +1,8 @@
-package org.example;
+package org.example.ui;
+
+import org.example.config.AnimationConfig;
+import org.example.components.roundButton;
+import org.example.components.roundPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,11 +14,9 @@ import java.io.IOException;
 public class landingPage extends JFrame {
     private Image jeepney;
     private Timer timer;
-    private int xVelocity = 1;
+    AnimationConfig config = new AnimationConfig();
     private int x = 0;
-    private int y = 85;
     private boolean isPaused = false;
-    private final int pauseDuration = 2000;
 
     public landingPage() throws IOException, FontFormatException {
         setTitle("Para!");
@@ -35,9 +37,23 @@ public class landingPage extends JFrame {
         setVisible(true);
     }
 
+    private ImageIcon createScaledIcon(String path, int width, int height) {
+        ImageIcon originalIcon = new ImageIcon(path);
+        Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaledImage);
+    }
+
+    private JLabel createImageLabel(String path, int width, int height) {
+        return new JLabel(createScaledIcon(path, width, height), SwingConstants.CENTER);
+    }
+
+    private Image createScaledImage(String path, int width, int height) {
+        ImageIcon icon = new ImageIcon(path);
+        return icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+    }
 
     private JPanel createHeaderPanel() throws IOException, FontFormatException {
-        Image backgroundImage = loadAndScaleImage("ProjectFiles/City.png", 1920, 160);
+        Image backgroundImage = createScaledImage("ProjectFiles/City.png", 1920, 160);
 
         JPanel header = new JPanel() {
             @Override
@@ -50,7 +66,7 @@ public class landingPage extends JFrame {
                 }
 
                 if (jeepney != null) {
-                    g2D.drawImage(jeepney, x, y, null);
+                    g2D.drawImage(jeepney, x, config.yPosition, null);
                 }
             }
         };
@@ -59,26 +75,36 @@ public class landingPage extends JFrame {
 
         header.setLayout(new FlowLayout(FlowLayout.CENTER, 0,0));
 
-        jeepney = loadAndScaleImage("ProjectFiles/jeep.png", 100, 100);
+        jeepney = createScaledImage("ProjectFiles/jeep.png", config.jeepneyWidth, config.jeepneyHeight);
         setupJeepneyAnimation(header);
 
-        ImageIcon logoIcon = new ImageIcon(loadAndScaleImage("ProjectFiles/Para.png", 175, 175));
-        header.add(new JLabel(logoIcon, SwingConstants.CENTER));
+        header.add(createImageLabel("ProjectFiles/Para.png", 175, 175));
 
         return header;
     }
 
     private void setupJeepneyAnimation(JPanel header) {
-        timer = new Timer(20, e -> {
+        timer = new Timer(config.timerInterval, e -> {
             if (!isPaused) {
-                x += xVelocity;
-                if (Math.abs(x - (header.getWidth() / 2 - jeepney.getWidth(null) / 2)) < 5) {
+                x += config.speed;
+                if (Math.abs(x - (header.getWidth() / 2 - jeepney.getWidth(null) / 2)) < config.centerThreshold) {
                     isPaused = true;
                     x = header.getWidth() / 2 - jeepney.getWidth(null) / 2;
-                    new Timer(pauseDuration, evt -> isPaused = false).start();
+                    Timer pauseTimer = new Timer(config.centerPauseDuration, evt -> {
+                        isPaused = false;
+                        ((Timer)evt.getSource()).stop();
+                    });
+                    pauseTimer.setRepeats(false);
+                    pauseTimer.start();
                 }
                 if (x >= header.getWidth()) {
-                    x = 0;
+                    isPaused = true;
+                    Timer restartTimer = new Timer(config.restartDelay, evt -> {
+                        x = 0;
+                        isPaused = false;
+                    });
+                    restartTimer.setRepeats(false);
+                    restartTimer.start();
                 }
             }
             header.repaint();
@@ -175,8 +201,7 @@ public class landingPage extends JFrame {
     }
 
     private JLabel createMockUpLabel() throws IOException {
-        ImageIcon mockUpIcon = new ImageIcon(loadAndScaleImage("ProjectFiles/MockUp.png", 475, 475));
-        return new JLabel(mockUpIcon, SwingConstants.CENTER);
+        return createImageLabel("ProjectFiles/MockUp.png", 475, 475);
     }
 
     private JLabel createHowToUseLabel() throws IOException, FontFormatException {
@@ -223,7 +248,8 @@ public class landingPage extends JFrame {
         label2.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         panel2.add(label2);
 
-        JButton button = new JButton("Then press search!");
+        roundButton button = new roundButton("Then press search!");
+        button.setArc(30,30);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setPreferredSize(new Dimension(30, 20));
         button.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
@@ -261,8 +287,7 @@ public class landingPage extends JFrame {
         label.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         panel.add(label);
 
-        ImageIcon routeIcon = new ImageIcon(loadAndScaleImage("ProjectFiles/RouteImg.png", 400, 400));
-        JLabel routeLabel = new JLabel(routeIcon, SwingConstants.CENTER);
+        JLabel routeLabel = createImageLabel("ProjectFiles/RouteImg.png", 400, 400);
         routeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         step2.add(Box.createVerticalStrut(30));
@@ -293,10 +318,15 @@ public class landingPage extends JFrame {
         label.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
         panel.add(label);
 
+        JLabel routeLabel = createImageLabel("ProjectFiles/routeov.png", 400, 400);
+        routeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         step3.add(Box.createVerticalStrut(30));
         step3.add(heading);
         step3.add(Box.createVerticalStrut(20));
         step3.add(panel);
+        step3.add(Box.createVerticalStrut(10));
+        step3.add(routeLabel);
 
         return step3;
     }
@@ -349,11 +379,6 @@ public class landingPage extends JFrame {
         footer.add(faq);
         footer.add(about);
         return footer;
-    }
-
-    private Image loadAndScaleImage(String path, int width, int height) throws IOException {
-        ImageIcon icon = new ImageIcon(path);
-        return icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
     }
 
     private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {

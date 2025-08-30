@@ -1,8 +1,9 @@
-package org.example;
+package org.example.ui;
+
+import org.example.components.roundPanel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.io.*;
 
 public class mainPage extends JFrame {
