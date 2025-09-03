@@ -1,12 +1,12 @@
 package org.example;
 
-import org.example.ui.landingPage;
+import org.example.ui.loginPage;
 
 import java.awt.*;
 import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException, FontFormatException {
-        new landingPage();
+        new loginPage();
     }
 }

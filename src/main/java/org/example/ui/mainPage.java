@@ -1,6 +1,11 @@
 package org.example.ui;
 
+import org.example.components.FooterPanel;
+import org.example.components.RoutePanel;
 import org.example.components.roundPanel;
+import org.example.config.appTheme;
+import org.example.resources.Images;
+import org.example.resources.fonts;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,12 +16,14 @@ public class mainPage extends JFrame {
         initializeFrame();
         JPanel mainPage = createMainPanel();
         add(mainPage, BorderLayout.CENTER);
-        add(createFooter(), BorderLayout.SOUTH);
+
+        FooterPanel footerPanel = new FooterPanel();
+        add(footerPanel, BorderLayout.SOUTH);
         setVisible(true);
     }
 
     private void initializeFrame() {
-        setSize(1920, 1080);
+        setSize(appTheme.WINDOW_SIZE);
         setTitle("Para!");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
@@ -34,11 +41,11 @@ public class mainPage extends JFrame {
 
     private JPanel createHeader() throws IOException {
         JPanel header = new JPanel();
-        header.setPreferredSize(new Dimension(1644, 160));
+        header.setPreferredSize(appTheme.HEADER_SIZE);
         header.setOpaque(false);
         header.setLayout(new BorderLayout());
 
-        ImageIcon logo = loadScaledLogo("ProjectFiles/Para.png", 175, 175);
+        ImageIcon logo = createScaledIcon(Images.PARA_LOGO, 175, 175);
         JLabel logoLabel = new JLabel(logo, SwingConstants.CENTER);
         header.add(logoLabel, BorderLayout.CENTER);
         return header;
@@ -53,9 +60,9 @@ public class mainPage extends JFrame {
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
 
         contentPane.add(createTextContainer());
-        contentPane.add(Box.createVerticalStrut(30));
+        contentPane.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
         contentPane.add(createResultLabel());
-        contentPane.add(Box.createVerticalStrut(30));
+        contentPane.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
         contentPane.add(createRouteContainer());
 
         center.add(contentPane);
@@ -63,9 +70,9 @@ public class mainPage extends JFrame {
     }
 
     private JPanel createTextContainer() throws IOException, FontFormatException {
-        roundPanel textContainer = new roundPanel(30);
+        roundPanel textContainer = new roundPanel(appTheme.BORDER_RADIUS_LARGE);
         textContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 150, 50));
-        textContainer.setBackground(new Color(0x84b477));
+        textContainer.setBackground(appTheme.GREEN);
         textContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         textContainer.add(createWelcomeContainer());
@@ -77,17 +84,17 @@ public class mainPage extends JFrame {
         JPanel wcContainer = new JPanel();
         wcContainer.setLayout(new BoxLayout(wcContainer, BoxLayout.Y_AXIS));
         wcContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
-        wcContainer.setBackground(new Color(0x84b477));
+        wcContainer.setBackground(appTheme.GREEN);
 
         JLabel wcText = new JLabel("Welcome Ken!");
-        wcText.setFont(loadCustomFont("ProjectFiles/DMSansItalic.ttf", 20f));
-        wcText.setForeground(new Color(0xffe786));
+        wcText.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 20f));
+        wcText.setForeground(appTheme.YELLOW);
 
         JLabel wcQuestion = new JLabel("<html>Where do you want<br>to go?</html>");
-        wcQuestion.setFont(loadCustomFont("ProjectFiles/DMSansBold.ttf", 40f));
+        wcQuestion.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 40f));
 
         wcContainer.add(wcText);
-        wcContainer.add(Box.createVerticalStrut(20));
+        wcContainer.add(Box.createVerticalStrut(appTheme.SPACING_MEDIUM));
         wcContainer.add(wcQuestion);
         return wcContainer;
     }
@@ -96,7 +103,7 @@ public class mainPage extends JFrame {
         JPanel inputContainer = new JPanel();
         inputContainer.setLayout(new BoxLayout(inputContainer, BoxLayout.Y_AXIS));
         inputContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
-        inputContainer.setBackground(new Color(0x84b477));
+        inputContainer.setBackground(appTheme.GREEN);
 
         JTextField currentLocation = new JTextField();
         currentLocation.setPreferredSize(new Dimension(250, 40));
@@ -105,15 +112,15 @@ public class mainPage extends JFrame {
         destination.setPreferredSize(new Dimension(250, 40));
 
         inputContainer.add(currentLocation);
-        inputContainer.add(Box.createVerticalStrut(20));
+        inputContainer.add(Box.createVerticalStrut(appTheme.SPACING_MEDIUM));
         inputContainer.add(destination);
         return inputContainer;
     }
 
     private JLabel createResultLabel() throws IOException, FontFormatException {
         JLabel resultLabel = new JLabel("We found 4 routes!");
-        resultLabel.setFont(loadCustomFont("ProjectFiles/DMSansItalic.ttf", 20f));
-        resultLabel.setForeground(new Color(0xd85259));
+        resultLabel.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 20f));
+        resultLabel.setForeground(appTheme.RED);
         resultLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         return resultLabel;
     }
@@ -124,51 +131,37 @@ public class mainPage extends JFrame {
         routeContainer.setPreferredSize(new Dimension(1200, 400));
         routeContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        for (int i = 0; i < 4; i++) {
-            roundPanel route = new roundPanel(30);
-            route.setPreferredSize(new Dimension(250, 100));
-            route.setBackground(Color.GRAY);
-            routeContainer.add(route);
-        }
+
+        RoutePanel panel1 = new RoutePanel();
+        RoutePanel panel2 = new RoutePanel("Mintal", "Roxas", "30min", "Jeep", appTheme.BLUE);
+        RoutePanel panel3 = new RoutePanel("Bangkal", "Lanang", "25min", "Jeep", appTheme.GREEN);
+
+        routeContainer.add(panel1);
+        routeContainer.add(panel2);
+        routeContainer.add(panel3);
+
         return routeContainer;
-    }
-
-    private JPanel createFooter() throws IOException, FontFormatException {
-        JPanel footer = new JPanel();
-        footer.setPreferredSize(new Dimension(1644, 60));
-        footer.setBackground(new Color(0xffe786));
-        footer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
-
-        JButton startButton = new JButton("Back to Home");
-        startButton.setFont(loadCustomFont("ProjectFiles/DMSans.ttf", 16f));
-        startButton.setBackground(new Color(0xd85259));
-        startButton.setForeground(new Color(0xe8ced6));
-        startButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        startButton.addActionListener(e -> {
-            try {
-                new landingPage().setVisible(true);
-                dispose();
-            } catch (IOException | FontFormatException ex) {
-                throw new RuntimeException(ex);
-            }
-        });
-
-        footer.add(startButton);
-        return footer;
-    }
-
-    private ImageIcon loadScaledLogo(String path, int width, int height) throws IOException {
-        ImageIcon img = new ImageIcon(path);
-        Image resized = img.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(resized);
     }
 
     private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
         Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
         GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
         return font.deriveFont(size);
+    }
+
+    private ImageIcon createScaledIcon(String path, int width, int height) {
+        ImageIcon originalIcon = new ImageIcon(path);
+        Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaledImage);
+    }
+
+    private JLabel createImageLabel(String path, int width, int height) {
+        return new JLabel(createScaledIcon(path, width, height), SwingConstants.CENTER);
+    }
+
+    private Image createScaledImage(String path, int width, int height) {
+        ImageIcon icon = new ImageIcon(path);
+        return icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
     }
 }
 
