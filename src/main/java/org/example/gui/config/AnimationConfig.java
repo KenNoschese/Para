@@ -1,4 +1,4 @@
-package org.example.config;
+package org.example.gui.config;
 
 public class AnimationConfig {
     public final int timerInterval = 20;

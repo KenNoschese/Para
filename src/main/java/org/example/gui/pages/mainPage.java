@@ -1,42 +1,35 @@
-package org.example.ui;
+package org.example.gui.pages;
 
-import org.example.components.FooterPanel;
-import org.example.components.RoutePanel;
-import org.example.components.roundPanel;
-import org.example.config.appTheme;
-import org.example.resources.Images;
-import org.example.resources.fonts;
+import org.example.gui.components.FooterPanel;
+import org.example.gui.components.RoutePanel;
+import org.example.gui.components.roundPanel;
+import org.example.gui.config.appTheme;
+import org.example.gui.resources.Images;
+import org.example.gui.resources.fonts;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.function.Consumer;
 
-public class mainPage extends JFrame {
-    public mainPage() throws IOException, FontFormatException {
-        initializeFrame();
-        JPanel mainPage = createMainPanel();
-        add(mainPage, BorderLayout.CENTER);
+public class mainPage extends JPanel {
+    private Consumer<String> cardChanger;
+
+    public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+        this.cardChanger = cardChanger;
+        setupPanel();
+    }
+
+    private void setupPanel() throws IOException, FontFormatException {
+        setLayout(new BorderLayout());
+        setPreferredSize(new Dimension(1644, 960));
+
+        add(createHeader(), BorderLayout.NORTH);
+        add(createCenterPanel(), BorderLayout.CENTER);
 
         FooterPanel footerPanel = new FooterPanel();
         add(footerPanel, BorderLayout.SOUTH);
-        setVisible(true);
-    }
-
-    private void initializeFrame() {
-        setSize(appTheme.WINDOW_SIZE);
-        setTitle("Para!");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
-    }
-
-    private JPanel createMainPanel() throws IOException, FontFormatException {
-        JPanel mainPage = new JPanel();
-        mainPage.setPreferredSize(new Dimension(1644, 960));
-        mainPage.setLayout(new BorderLayout());
-
-        mainPage.add(createHeader(), BorderLayout.NORTH);
-        mainPage.add(createCenterPanel(), BorderLayout.CENTER);
-        return mainPage;
     }
 
     private JPanel createHeader() throws IOException {
@@ -130,7 +123,6 @@ public class mainPage extends JFrame {
         routeContainer.setLayout(new GridLayout(2, 2, 25, 25));
         routeContainer.setPreferredSize(new Dimension(1200, 400));
         routeContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
-
 
         RoutePanel panel1 = new RoutePanel();
         RoutePanel panel2 = new RoutePanel("Mintal", "Roxas", "30min", "Jeep", appTheme.BLUE);

@@ -1,9 +1,8 @@
-package org.example.components;
+package org.example.gui.components;
 
-import org.example.config.appTheme;
-import org.example.resources.fonts;
+import org.example.gui.config.appTheme;
+import org.example.gui.resources.fonts;
 
-import javax.swing.*;
 import java.awt.*;
 
 public class RoutePanel extends roundPanel {

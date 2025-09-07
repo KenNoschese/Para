@@ -1,32 +1,34 @@
-package org.example.ui;
+package org.example.gui.pages;
 
-import org.example.components.roundButton;
-import org.example.components.roundTextField;
-import org.example.config.appTheme;
-import org.example.resources.Images;
-import org.example.resources.fonts;
+import org.example.gui.components.roundButton;
+import org.example.gui.components.roundTextField;
+import org.example.gui.config.appTheme;
+import org.example.gui.resources.Images;
+import org.example.gui.resources.fonts;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Consumer;
 
-public class loginPage extends JFrame {
+public class loginPage extends JPanel {
+    private Consumer<String> cardChanger;
 
-    public loginPage() throws IOException, FontFormatException {
-        setTitle("Para!");
-        setSize(appTheme.WINDOW_SIZE);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+    public loginPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+        this.cardChanger = cardChanger;
+        setupPanel();
+    }
+
+    private void setupPanel() throws IOException, FontFormatException {
         setLayout(new BorderLayout());
-
-        getContentPane().setBackground(appTheme.WHITE);
+        setBackground(appTheme.WHITE);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(appTheme.WHITE);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
-
 
         ImageIcon img = new ImageIcon(Images.PARA_LOGO);
         Image resized = img.getImage().getScaledInstance(250, 250, Image.SCALE_SMOOTH);
@@ -42,7 +44,6 @@ public class loginPage extends JFrame {
         formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
         formContent.setBackground(appTheme.WHITE);
 
-
         JLabel titleLabel = new JLabel("Create an account", SwingConstants.CENTER);
         titleLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 28f));
         titleLabel.setForeground(appTheme.BLACK);
@@ -55,8 +56,8 @@ public class loginPage extends JFrame {
 
         JTextField usernameField = createTextField();
         JTextField passwordField = createTextField();
-
         JButton signUpButton = createSignUpButton();
+
         JLabel orLabel = new JLabel("or", SwingConstants.CENTER);
         orLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
         orLabel.setForeground(Color.GRAY);
@@ -73,30 +74,22 @@ public class loginPage extends JFrame {
         formContent.add(passwordField);
         formContent.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
         formContent.add(signUpButton);
-
         formContent.add(orLabel);
-
         formContent.add(loginButton);
 
         formPanel.add(formContent, BorderLayout.CENTER);
-
         mainPanel.add(formPanel, BorderLayout.CENTER);
-
         add(mainPanel, BorderLayout.CENTER);
-        setVisible(true);
     }
-
 
     private JTextField createTextField() throws IOException, FontFormatException {
         roundTextField textField = new roundTextField(0);
-        textField.setArc(30,30);
+        textField.setArc(30, 30);
         textField.setMaximumSize(new Dimension(400, 45));
         textField.setPreferredSize(new Dimension(400, 45));
         textField.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
         textField.setForeground(Color.GRAY);
         textField.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-
         return textField;
     }
 
@@ -111,7 +104,6 @@ public class loginPage extends JFrame {
         button.setBorder(BorderFactory.createEmptyBorder());
         button.setFocusPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         return button;
     }
 
@@ -126,31 +118,16 @@ public class loginPage extends JFrame {
         button.setBorder(BorderFactory.createEmptyBorder());
         button.setFocusPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                landingPage landingFrame = null;
-                try {
-                    landingFrame = new landingPage();
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                } catch (FontFormatException ex) {
-                    throw new RuntimeException(ex);
-                }
-                landingFrame.setVisible(true);
 
+        button.addActionListener(e -> cardChanger.accept("LANDING"));
 
-            }
-        });
         return button;
     }
 
     private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
         Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
-
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         ge.registerFont(font);
         return font.deriveFont(size);
     }
-
 }

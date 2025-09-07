@@ -1,4 +1,4 @@
-package org.example.resources;
+package org.example.gui.resources;
 
 public class Images {
     public static final String CITY = "ProjectFiles/City.png";

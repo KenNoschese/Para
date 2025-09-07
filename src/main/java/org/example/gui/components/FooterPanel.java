@@ -1,7 +1,7 @@
-package org.example.components;
+package org.example.gui.components;
 
-import org.example.config.appTheme;
-import org.example.resources.fonts;
+import org.example.gui.config.appTheme;
+import org.example.gui.resources.fonts;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,7 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 
-import static org.example.resources.fonts.loadCustomFont;
+import static org.example.gui.resources.fonts.loadCustomFont;
 
 public class FooterPanel extends JPanel{
     public FooterPanel() throws IOException, FontFormatException {

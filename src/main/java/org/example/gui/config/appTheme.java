@@ -1,4 +1,4 @@
-package org.example.config;
+package org.example.gui.config;
 
 import java.awt.*;
 

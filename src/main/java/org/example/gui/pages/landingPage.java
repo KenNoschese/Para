@@ -1,10 +1,12 @@
-package org.example.ui;
+package org.example.gui.pages;
 
-import org.example.config.AnimationConfig;
-import org.example.components.*;
-import org.example.config.appTheme;
-import org.example.resources.Images;
-import org.example.resources.fonts;
+import org.example.gui.components.FooterPanel;
+import org.example.gui.components.roundButton;
+import org.example.gui.components.roundPanel;
+import org.example.gui.config.AnimationConfig;
+import org.example.gui.config.appTheme;
+import org.example.gui.resources.Images;
+import org.example.gui.resources.fonts;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,21 +14,24 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.function.Consumer;
 
-public class landingPage extends JFrame {
+public class landingPage extends JPanel {
+    private Consumer<String> cardChanger;
     private Image jeepney;
     private Timer timer;
-    AnimationConfig config = new AnimationConfig();
+    private AnimationConfig config = new AnimationConfig();
     private int x = 0;
     private boolean isPaused = false;
 
-    public landingPage() throws IOException, FontFormatException {
-        setTitle("Para!");
-        setSize(appTheme.WINDOW_SIZE);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+    public landingPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+        this.cardChanger = cardChanger;
+        setupPanel();
+    }
+
+    private void setupPanel() throws IOException, FontFormatException {
         setLayout(new BorderLayout());
-        getContentPane().setBackground(Color.WHITE);
+        setBackground(Color.WHITE);
 
         JPanel headerPanel = createHeaderPanel();
         JPanel centerPanel = createCenterPanel();
@@ -35,8 +40,6 @@ public class landingPage extends JFrame {
         add(headerPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
         add(footerPanel, BorderLayout.SOUTH);
-
-        setVisible(true);
     }
 
     private ImageIcon createScaledIcon(String path, int width, int height) {
@@ -74,14 +77,12 @@ public class landingPage extends JFrame {
         };
         header.setPreferredSize(new Dimension(appTheme.HEADER_SIZE));
         header.setOpaque(false);
-
-        header.setLayout(new FlowLayout(FlowLayout.CENTER, 0,0));
+        header.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
         jeepney = createScaledImage(Images.JEEP, config.jeepneyWidth, config.jeepneyHeight);
         setupJeepneyAnimation(header);
 
         header.add(createImageLabel(Images.PARA_LOGO, 175, 175));
-
         return header;
     }
 
@@ -178,14 +179,9 @@ public class landingPage extends JFrame {
         start.setBackground(appTheme.RED);
         start.setForeground(appTheme.PINK);
         start.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        start.addActionListener(e -> {
-            try {
-                new mainPage().setVisible(true);
-                dispose();
-            } catch (IOException | FontFormatException ex) {
-                throw new RuntimeException(ex);
-            }
-        });
+
+        start.addActionListener(e -> cardChanger.accept("MAIN"));
+
         start.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -251,7 +247,7 @@ public class landingPage extends JFrame {
         panel2.add(label2);
 
         roundButton button = new roundButton("Then press search!");
-        button.setArc(30,30);
+        button.setArc(30, 30);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setPreferredSize(new Dimension(30, 20));
         button.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));

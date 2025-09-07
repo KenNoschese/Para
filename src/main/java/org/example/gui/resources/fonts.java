@@ -1,4 +1,4 @@
-package org.example.resources;
+package org.example.gui.resources;
 
 import java.awt.*;
 import java.io.File;
