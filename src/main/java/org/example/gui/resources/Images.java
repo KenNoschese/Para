@@ -7,4 +7,5 @@ public class Images {
     public static final String MOCKUP = "ProjectFiles/MockUp.png";
     public static final String ROUTE_IMAGE = "ProjectFiles/RouteImg.png";
     public static final String ROUTE_OVERVIEW = "ProjectFiles/routeov.png";
+    public static final String PLACEHOLDER = "ProjectFiles/nodata.png";
 }

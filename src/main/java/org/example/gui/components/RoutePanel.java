@@ -1,36 +1,28 @@
 package org.example.gui.components;
 
+import org.example.gui.resources.RouteData;
 import org.example.gui.config.appTheme;
 import org.example.gui.resources.fonts;
 
 import java.awt.*;
 
 public class RoutePanel extends roundPanel {
-    private String fromLocation;
-    private String toLocation;
-    private String duration;
-    private String transportMode;
-    private Color accentColor;
-
+    private RouteData routeData;
     public RoutePanel() {
-        this("Toril", "Roxas", "45min", "Bus", appTheme.RED);
+        this(new RouteData("Toril", "Roxas", "Bus Route 1", "d", 8, 3, "12min.", 2.11));
     }
 
-    public RoutePanel(String fromLocation, String toLocation, String duration, String transportMode, Color accentColor) {
-        super(appTheme.BORDER_RADIUS_SMALL);
-        this.fromLocation = fromLocation;
-        this.toLocation = toLocation;
-        this.duration = duration;
-        this.transportMode = transportMode;
-        this.accentColor = accentColor;
-
+    public RoutePanel(RouteData routeData) {
+        super(appTheme.BORDER_RADIUS_LARGE);
+        this.routeData = routeData;
         setupPanel();
     }
 
     private void setupPanel() {
-        setPreferredSize(new Dimension(300, 80));
+        setPreferredSize(new Dimension(Integer.MAX_VALUE, 60));
+        setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
         setBackground(appTheme.WHITE);
-        setLayout(null); // Using absolute positioning for precise control
+        setLayout(null);
     }
 
     @Override
@@ -40,94 +32,39 @@ public class RoutePanel extends roundPanel {
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         try {
-            Font titleFont = fonts.loadCustomFont(fonts.DM_SANS_BOLD, appTheme.TEXT_MEDIUM);
-            Font subtitleFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, appTheme.TEXT_SMALL);
-            Font durationFont = fonts.loadCustomFont(fonts.DM_SANS_BOLD, appTheme.TEXT_LARGE);
-
-            drawContent(g2d, titleFont, subtitleFont, durationFont);
+            Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, appTheme.TEXT_SMALL);
+            drawTableContent(g2d, dataFont);
         } catch (Exception e) {
-            Font titleFont = new Font("Arial", Font.BOLD, 14);
-            Font subtitleFont = new Font("Arial", Font.PLAIN, 12);
-            Font durationFont = new Font("Arial", Font.BOLD, 16);
-
-            drawContent(g2d, titleFont, subtitleFont, durationFont);
+            Font dataFont = new Font("Arial", Font.PLAIN, 12);
+            drawTableContent(g2d, dataFont);
         }
 
         g2d.dispose();
     }
 
-    private void drawContent(Graphics2D g2d, Font titleFont, Font subtitleFont, Font durationFont) {
-        g2d.setColor(accentColor);
-        g2d.setStroke(new BasicStroke(4f));
-        g2d.drawLine(8, 12, 8, getHeight() - 12);
+    private void drawTableContent(Graphics2D g2d, Font dataFont) {
+        int[] columnWidths = {150, 100, 100, 600, 100, 100};
+        int[] columnX = new int[6];
+        columnX[0] = 10;
+        for (int i = 1; i < 6; i++) {
+            columnX[i] = columnX[i-1] + columnWidths[i-1];
+        }
 
-        drawTransportIcon(g2d, 20, 15);
-
+        g2d.setFont(dataFont);
         g2d.setColor(appTheme.BLACK);
-        g2d.setFont(titleFont);
-        g2d.drawString(fromLocation + " → " + toLocation, 50, 25);
 
-        g2d.setColor(appTheme.GRAY);
-        g2d.setFont(subtitleFont);
-        g2d.drawString(transportMode + " • 1 Transfer", 50, 45);
+        int yPos = (getHeight() + g2d.getFontMetrics().getAscent()) / 2;
 
-        g2d.setColor(accentColor);
-        g2d.setFont(durationFont);
-        FontMetrics fm = g2d.getFontMetrics();
-        String durationText = "~" + duration;
-        int textWidth = fm.stringWidth(durationText);
-        g2d.drawString(durationText, getWidth() - textWidth - appTheme.SPACING_SMALL, 35);
+        g2d.drawString(routeData.getRoute(), columnX[0], yPos);
+        g2d.drawString(String.valueOf(routeData.getTransfers()), columnX[1], yPos);
+        g2d.drawString(String.valueOf(routeData.getstops()), columnX[2], yPos);
+        g2d.drawString(routeData.getDetails(), columnX[3], yPos);
+        g2d.drawString(String.format("Php%.2f", routeData.getFare()), columnX[4], yPos);
+        g2d.drawString(String.valueOf(routeData.getETA()), columnX[5], yPos);
     }
 
-    private void drawTransportIcon(Graphics2D g2d, int x, int y) {
-        // Simple circular icon with transport mode letter
-        g2d.setColor(accentColor);
-        g2d.fillOval(x, y, 20, 20);
-
-        g2d.setColor(appTheme.WHITE);
-        g2d.setFont(new Font("Arial", Font.BOLD, 10));
-        FontMetrics fm = g2d.getFontMetrics();
-        String letter = transportMode.substring(0, 1).toUpperCase();
-        int letterX = x + (20 - fm.stringWidth(letter)) / 2;
-        int letterY = y + (20 + fm.getAscent()) / 2 - 2;
-        g2d.drawString(letter, letterX, letterY);
-    }
-
-    public void setRoute(String from, String to) {
-        this.fromLocation = from;
-        this.toLocation = to;
+    public void setRouteData(RouteData routeData) {
+        this.routeData = routeData;
         repaint();
     }
-
-    public void setDuration(String duration) {
-        this.duration = duration;
-        repaint();
-    }
-
-    public void setTransportMode(String transportMode) {
-        this.transportMode = transportMode;
-        repaint();
-    }
-
-    public void setAccentColor(Color accentColor) {
-        this.accentColor = accentColor;
-        repaint();
-    }
-
-    public String getFromLocation() {
-        return fromLocation;
-    }
-    public String getToLocation() {
-        return toLocation;
-    }
-    public String getDuration() {
-        return duration;
-    }
-    public String getTransportMode() {
-        return transportMode;
-    }
-    public Color getAccentColor() {
-        return accentColor;
-    }
-
 }
