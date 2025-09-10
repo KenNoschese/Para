@@ -1,8 +1,9 @@
 package org.example.gui.pages;
 
+import org.example.gui.appManager.ThemeManager;
+import org.example.gui.appManager.sizeManager;
 import org.example.gui.components.roundButton;
 import org.example.gui.components.roundTextField;
-import org.example.gui.config.appTheme;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.fonts;
 
@@ -24,10 +25,10 @@ public class loginPage extends JPanel {
 
     private void setupPanel() throws IOException, FontFormatException {
         setLayout(new BorderLayout());
-        setBackground(appTheme.WHITE);
+        setBackground(ThemeManager.getInstance().getWhite());
 
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(appTheme.WHITE);
+        mainPanel.setBackground(ThemeManager.getInstance().getWhite());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
 
         ImageIcon img = new ImageIcon(Images.PARA_LOGO);
@@ -38,20 +39,20 @@ public class loginPage extends JPanel {
         mainPanel.add(logoLabel, BorderLayout.NORTH);
 
         JPanel formPanel = new JPanel(new BorderLayout());
-        formPanel.setBackground(appTheme.WHITE);
+        formPanel.setBackground(ThemeManager.getInstance().getWhite());
 
         JPanel formContent = new JPanel();
         formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
-        formContent.setBackground(appTheme.WHITE);
+        formContent.setBackground(ThemeManager.getInstance().getWhite());
 
         JLabel titleLabel = new JLabel("Create an account", SwingConstants.CENTER);
         titleLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 28f));
-        titleLabel.setForeground(appTheme.BLACK);
+        titleLabel.setForeground(ThemeManager.getInstance().getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("Enter a username and password", SwingConstants.CENTER);
         subtitleLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        subtitleLabel.setForeground(appTheme.GRAY);
+        subtitleLabel.setForeground(ThemeManager.getInstance().getGray());
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JTextField usernameField = createTextField();
@@ -66,13 +67,13 @@ public class loginPage extends JPanel {
         JButton loginButton = createLoginButton();
 
         formContent.add(titleLabel);
-        formContent.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
+        formContent.add(Box.createVerticalStrut(sizeManager.SPACING_LARGE));
         formContent.add(subtitleLabel);
-        formContent.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
+        formContent.add(Box.createVerticalStrut(sizeManager.SPACING_LARGE));
         formContent.add(usernameField);
-        formContent.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
+        formContent.add(Box.createVerticalStrut(sizeManager.SPACING_LARGE));
         formContent.add(passwordField);
-        formContent.add(Box.createVerticalStrut(appTheme.SPACING_LARGE));
+        formContent.add(Box.createVerticalStrut(sizeManager.SPACING_LARGE));
         formContent.add(signUpButton);
         formContent.add(orLabel);
         formContent.add(loginButton);
@@ -99,8 +100,8 @@ public class loginPage extends JPanel {
         button.setMaximumSize(new Dimension(400, 45));
         button.setPreferredSize(new Dimension(400, 45));
         button.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        button.setForeground(appTheme.WHITE);
-        button.setBackground(appTheme.BLACK);
+        button.setForeground(ThemeManager.getInstance().getWhite());
+        button.setBackground(ThemeManager.getInstance().getBlack());
         button.setBorder(BorderFactory.createEmptyBorder());
         button.setFocusPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -113,8 +114,8 @@ public class loginPage extends JPanel {
         button.setMaximumSize(new Dimension(400, 45));
         button.setPreferredSize(new Dimension(400, 45));
         button.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16));
-        button.setForeground(appTheme.WHITE);
-        button.setBackground(appTheme.RED);
+        button.setForeground(ThemeManager.getInstance().getWhite());
+        button.setBackground(ThemeManager.getInstance().getRed());
         button.setBorder(BorderFactory.createEmptyBorder());
         button.setFocusPainted(false);
         button.setAlignmentX(Component.CENTER_ALIGNMENT);

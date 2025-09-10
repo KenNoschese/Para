@@ -1,28 +1,39 @@
 package org.example.gui.components;
 
+import org.example.gui.appManager.ThemeManager;
+import org.example.gui.appManager.sizeManager;
 import org.example.gui.resources.RouteData;
-import org.example.gui.config.appTheme;
 import org.example.gui.resources.fonts;
 
 import java.awt.*;
 
-public class RoutePanel extends roundPanel {
+public class RoutePanel extends roundPanel implements ThemeManager.ThemeChangeListener {
+    private Color defaultColor;
     private RouteData routeData;
+    private final ThemeManager themeManager;
+
     public RoutePanel() {
         this(new RouteData("Toril", "Roxas", "Bus Route 1", "d", 8, 3, "12min.", 2.11));
     }
 
     public RoutePanel(RouteData routeData) {
-        super(appTheme.BORDER_RADIUS_LARGE);
+        super(sizeManager.BORDER_RADIUS_LARGE);
         this.routeData = routeData;
+        this.themeManager = ThemeManager.getInstance();
+        this.themeManager.addThemeChangeListener(this);
+
         setupPanel();
+        setupHoverEffect();
     }
 
     private void setupPanel() {
         setPreferredSize(new Dimension(Integer.MAX_VALUE, 60));
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-        setBackground(appTheme.WHITE);
+        defaultColor = themeManager.getPanelColor(); // stay consistent
+        setBackground(defaultColor);
+        setForeground(themeManager.getForegroundColor());
         setLayout(null);
+        putClientProperty("themeColor", "panel");
     }
 
     @Override
@@ -32,7 +43,7 @@ public class RoutePanel extends roundPanel {
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         try {
-            Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, appTheme.TEXT_SMALL);
+            Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, sizeManager.TEXT_SMALL);
             drawTableContent(g2d, dataFont);
         } catch (Exception e) {
             Font dataFont = new Font("Arial", Font.PLAIN, 12);
@@ -51,7 +62,7 @@ public class RoutePanel extends roundPanel {
         }
 
         g2d.setFont(dataFont);
-        g2d.setColor(appTheme.BLACK);
+        g2d.setColor(themeManager.getBlack());
 
         int yPos = (getHeight() + g2d.getFontMetrics().getAscent()) / 2;
 
@@ -66,5 +77,35 @@ public class RoutePanel extends roundPanel {
     public void setRouteData(RouteData routeData) {
         this.routeData = routeData;
         repaint();
+    }
+
+    private void setupHoverEffect() {
+        Color hoverColor = themeManager.getYellow().brighter();
+
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                setBackground(hoverColor);
+                repaint();
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                setBackground(defaultColor);
+                repaint();
+            }
+        });
+    }
+
+    @Override
+    public void onThemeChange(boolean isDarkMode) {
+        defaultColor = themeManager.getPanelColor();
+        setBackground(defaultColor);
+        repaint();
+    }
+
+    public void dispose() {
+
+        themeManager.removeThemeChangeListener(this);
     }
 }

@@ -1,9 +1,9 @@
 package org.example.gui;
 
+import org.example.gui.appManager.sizeManager;
 import org.example.gui.pages.loginPage;
 import org.example.gui.pages.landingPage;
 import org.example.gui.pages.mainPage;
-import org.example.gui.config.appTheme;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,7 +19,7 @@ public class MainFrame extends JFrame {
 
     private void initializeFrame() {
         setTitle("Para!");
-        setSize(appTheme.WINDOW_SIZE);
+        setSize(sizeManager.WINDOW_SIZE);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);

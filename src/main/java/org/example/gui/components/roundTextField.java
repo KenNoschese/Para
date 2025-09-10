@@ -40,7 +40,7 @@ public class roundTextField extends JTextField {
         g2.setColor(getBackground());
         g2.fill(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, arcWidth, arcHeight));
         g2.dispose();
-        super.paintComponent(g); // Use original Graphics
+        super.paintComponent(g);
     }
 
     @Override
@@ -56,18 +56,17 @@ public class roundTextField extends JTextField {
     @Override
     public Dimension getPreferredSize() {
         Dimension size = super.getPreferredSize();
-        // Ensure reasonable width based on columns and minimum height
-        int minWidth = getColumnWidth() * getColumns() + 24; // Account for padding
+        int minWidth = getColumnWidth() * getColumns() + 24;
         return new Dimension(Math.max(size.width, minWidth), Math.max(size.height, 30));
     }
 
     @Override
     public Dimension getMinimumSize() {
-        return new Dimension(100, 30); // Prevent collapse
+        return new Dimension(100, 30);
     }
 
     public void setArc(int width, int height) {
-        this.arcWidth = Math.min(width, getHeight() - 2); // Adjust for border
+        this.arcWidth = Math.min(width, getHeight() - 2);
         this.arcHeight = Math.min(height, getHeight() - 2);
         repaint();
     }
