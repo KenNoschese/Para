@@ -19,10 +19,10 @@ public class MainFrame extends JFrame {
 
     private void initializeFrame() {
         setTitle("Para!");
-        setSize(sizeManager.WINDOW_SIZE);
+        setSize(sizeManager.getInstance().flexibleWidth(1920, 1080));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setResizable(false);
+        setResizable(true);
     }
 
     private void setupUI() {

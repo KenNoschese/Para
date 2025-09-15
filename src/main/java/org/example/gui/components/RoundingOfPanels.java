@@ -3,10 +3,10 @@ package org.example.gui.components;
 import javax.swing.*;
 import java.awt.*;
 
-public class roundPanel extends JPanel {
+public class RoundingOfPanels extends JPanel {
     private final int radius;
 
-    public roundPanel(int radius) {
+    public RoundingOfPanels(int radius) {
         this.radius = radius;
         setOpaque(false);
     }

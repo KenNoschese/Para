@@ -1,13 +1,13 @@
 package org.example.gui.pages;
 
-import org.example.gui.appManager.darkModeToggle;
+import org.example.gui.appManager.ThemeManager;
+import org.example.gui.appManager.sizeManager;
 import org.example.gui.components.*;
 import org.example.gui.resources.RouteData;
 import org.example.gui.config.RouteManager;
-import org.example.gui.appManager.ThemeManager;
-import org.example.gui.appManager.sizeManager;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.fonts;
+import org.example.gui.components.Factories.factoryPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,23 +21,20 @@ import java.util.function.Consumer;
 public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener {
     private Consumer<String> cardChanger;
     private JPanel routeContainer;
-    private roundTextField currentLocation;
-    private roundTextField destination;
+    private RoundingOfTextfields currentLocation;
+    private RoundingOfTextfields destination;
     private RouteManager routeManager;
     private ThemeManager themeManager;
-
-    private JPanel headerPanel;
     private JPanel centerPanel;
-    private FooterPanel footerPanel;
-    private roundPanel textContainer;
+    private RoundingOfPanels textContainer;
     private JPanel welcomeContainer;
     private JPanel inputContainer;
-    private roundButton submitButton;
-    private roundPanel infoPanel;
-    private roundPanel savedPanel;
-    private roundPanel recentPanel;
+    private RoundingOfButtons submitButton;
+    private RoundingOfPanels infoPanel;
+    private RoundingOfPanels savedPanel;
+    private RoundingOfPanels recentPanel;
     private JLabel infoLabel, savedLabel, recentLabel;
-    private JLabel wcText, wcQuestion; // Store welcome text labels
+    private JLabel wcText, wcQuestion;
 
     public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
@@ -49,31 +46,15 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private void setupPanel() throws IOException, FontFormatException {
         this.routeManager = new RouteManager();
         setLayout(new BorderLayout());
-        setPreferredSize(new Dimension(1920, 1080));
+        setPreferredSize(sizeManager.getInstance().flexibleWidth(1920, 1080));
+        setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         setBackground(themeManager.getBackgroundColor());
 
-        headerPanel = createHeader();
+        // Use FactoryPanel for header and footer
+        add(factoryPanel.createHeaderPanel(), BorderLayout.NORTH);
         centerPanel = createCenterPanel();
-        footerPanel = new FooterPanel();
-
-        add(headerPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
-        add(footerPanel, BorderLayout.SOUTH);
-    }
-
-    private JPanel createHeader() throws IOException {
-        JPanel header = new JPanel();
-        header.setPreferredSize(new Dimension(sizeManager.HEADER_SIZE));
-        header.setBackground(themeManager.getBackgroundColor());
-        header.setLayout(new BorderLayout());
-
-        ImageIcon logo = createScaledIcon(Images.PARA_LOGO, 175, 175);
-        JLabel logoLabel = new JLabel(logo, SwingConstants.CENTER);
-
-        header.add(logoLabel, BorderLayout.CENTER);
-        header.add(new darkModeToggle(), BorderLayout.EAST);
-
-        return header;
+        add(factoryPanel.createFooterPanel(), BorderLayout.SOUTH);
     }
 
     private JPanel createCenterPanel() throws IOException, FontFormatException {
@@ -103,31 +84,27 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         rightPanel.setPreferredSize(new Dimension(450, 1080));
         rightPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Info
         infoLabel = createInfoLabel();
         rightPanel.add(infoLabel);
-        rightPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         rightPanel.add(createInfoPanel());
 
-        rightPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
 
-        // Saved
         savedLabel = createSavedLabel();
         rightPanel.add(savedLabel);
-        rightPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         rightPanel.add(createSavedPanel());
 
-        rightPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
 
-        // Recent
         recentLabel = createRecentLabel();
         rightPanel.add(recentLabel);
-        rightPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         rightPanel.add(createRecentPanel());
 
         return rightPanel;
     }
-
 
     private JPanel createLeftJPanel() throws IOException, FontFormatException {
         JPanel leftPanel = new JPanel();
@@ -137,14 +114,14 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         leftPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         leftPanel.add(createTextContainer());
-        leftPanel.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        leftPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         leftPanel.add(createRouteContainer());
 
         return leftPanel;
     }
 
     private JPanel createTextContainer() throws IOException, FontFormatException {
-        textContainer = new roundPanel(sizeManager.BORDER_RADIUS_LARGE);
+        textContainer = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
         textContainer.setLayout(new FlowLayout(FlowLayout.LEFT, 150, 75));
         textContainer.setPreferredSize(new Dimension(650, 195));
         textContainer.setBackground(themeManager.getYellow());
@@ -162,16 +139,16 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         welcomeContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
         welcomeContainer.setBackground(themeManager.getYellow());
 
-        wcText = new JLabel("Welcome Ken!");
+        wcText = new JLabel("Welcome!");
         wcText.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 22f));
-        wcText.setForeground(themeManager.getGreen());
+        wcText.setForeground(themeManager.getBlack());
 
         wcQuestion = new JLabel("<html>Where do you want<br>to go?</html>");
         wcQuestion.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 34f));
         wcQuestion.setForeground(themeManager.getForegroundColor());
 
         welcomeContainer.add(wcText);
-        welcomeContainer.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        welcomeContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         welcomeContainer.add(wcQuestion);
 
         return welcomeContainer;
@@ -183,28 +160,28 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         inputContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
         inputContainer.setBackground(themeManager.getYellow());
 
-        currentLocation = new roundTextField(26);
+        currentLocation = new RoundingOfTextfields(26);
         currentLocation.setPreferredSize(new Dimension(250, 40));
         currentLocation.setMaximumSize(new Dimension(250, 40));
         currentLocation.setBackground(themeManager.getComponentsColor());
         currentLocation.setForeground(themeManager.getForegroundColor());
 
-        destination = new roundTextField(26);
+        destination = new RoundingOfTextfields(26);
         destination.setPreferredSize(new Dimension(250, 40));
         destination.setMaximumSize(new Dimension(250, 40));
         destination.setBackground(themeManager.getComponentsColor());
         destination.setForeground(themeManager.getForegroundColor());
 
-        submitButton = new roundButton("GO");
+        submitButton = new RoundingOfButtons("GO");
         submitButton.setPreferredSize(new Dimension(100, 40));
         submitButton.setMaximumSize(new Dimension(100, 40));
         submitButton.setBackground(themeManager.getGreen());
         submitButton.setForeground(themeManager.getWhite());
-        submitButton.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14));
-        submitButton.setArc(30, 30);
+        submitButton.setFont(loadCustomFont(fonts.DM_SANS_BOLD, sizeManager.getInstance().getTextSmall()));
+        submitButton.setArc(sizeManager.getInstance().getBorderRadiusLarge(), sizeManager.getInstance().getBorderRadiusLarge());
         submitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        submitButton.addMouseListener(new MouseAdapter (){
+        submitButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 submitButton.setBackground(themeManager.getWhite());
@@ -222,19 +199,19 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         currentLocation.addActionListener(e -> searchRoutes());
         destination.addActionListener(e -> searchRoutes());
 
-        inputContainer.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         inputContainer.add(currentLocation);
-        inputContainer.add(Box.createVerticalStrut(sizeManager.SPACING_MEDIUM));
+        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         inputContainer.add(destination);
-        inputContainer.add(Box.createVerticalStrut(sizeManager.SPACING_MEDIUM));
+        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         inputContainer.add(submitButton);
-        inputContainer.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
 
         return inputContainer;
     }
 
-    private roundPanel createStatusPanel() {
-        roundPanel panel = new roundPanel(sizeManager.BORDER_RADIUS_LARGE);
+    private RoundingOfPanels createStatusPanel() {
+        RoundingOfPanels panel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
         panel.setPreferredSize(new Dimension(360, 170));
         panel.setBackground(themeManager.getBlue());
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -242,18 +219,21 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     }
 
     private void setPanelPlaceholder(JPanel panel, String message) {
-        JLabel placeholderImg = createImageLabel(Images.PLACEHOLDER, 100, 100);
-        placeholderImg.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel placeHolder = Images.getInstance().getPlaceholderLabel(100, 100);
+
+        placeHolder.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel placeholderText = new JLabel(message);
         try {
             placeholderText.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 14));
-        } catch (Exception ex) {}
+        } catch (Exception ex) {
+            // ignore
+        }
         placeholderText.setForeground(themeManager.getForegroundColor());
         placeholderText.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         panel.add(Box.createVerticalGlue());
-        panel.add(placeholderImg);
+        panel.add(placeHolder);
         panel.add(Box.createVerticalStrut(10));
         panel.add(placeholderText);
         panel.add(Box.createVerticalGlue());
@@ -262,10 +242,9 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         panel.repaint();
     }
 
-    private roundPanel createInfoPanel() {
+    private RoundingOfPanels createInfoPanel() {
         infoPanel = createStatusPanel();
-
-        setInfoMessage("No chosen route."); // default
+        setInfoMessage("No chosen route.");
         return infoPanel;
     }
 
@@ -273,13 +252,14 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         setPanelPlaceholder(infoPanel, message);
     }
 
-    private roundPanel createSavedPanel() {
+    private RoundingOfPanels createSavedPanel() {
         savedPanel = createStatusPanel();
-        setSavedRoutes(new ArrayList<>()); // default empty
+        setSavedRoutes(new ArrayList<>());
         return savedPanel;
     }
 
     public void setSavedRoutes(ArrayList<String> routes) {
+        savedPanel.removeAll();
         if (routes.isEmpty()) {
             setPanelPlaceholder(savedPanel, "No saved routes.");
         } else {
@@ -304,7 +284,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedPanel.repaint();
     }
 
-    private roundPanel createRecentPanel() {
+    private RoundingOfPanels createRecentPanel() {
         recentPanel = createStatusPanel();
         setRecentSearches(new ArrayList<>());
         return recentPanel;
@@ -324,7 +304,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         recentPanel.repaint();
     }
 
-
     private JLabel createInfoLabel() throws IOException, FontFormatException {
         infoLabel = new JLabel("Route Info");
         infoLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
@@ -340,6 +319,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         return savedLabel;
     }
+
     private JLabel createRecentLabel() throws IOException, FontFormatException {
         recentLabel = new JLabel("Recent Searches");
         recentLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
@@ -360,7 +340,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         routeContainer.setPreferredSize(new Dimension(870, 450));
         routeContainer.setBorder(BorderFactory.createEmptyBorder());
 
-        routeContainer.add(new RouteHeader());
+        // Use FactoryPanel instead of RouteHeader
+        routeContainer.add(factoryPanel.createRouteHeader());
         routeContainer.add(Box.createVerticalStrut(10));
 
         mainContainer.add(Box.createVerticalStrut(5));
@@ -395,7 +376,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private void displayRoutes(ArrayList<RouteData> routes, String from, String to)
             throws IOException, FontFormatException {
         routeContainer.removeAll();
-        routeContainer.add(new RouteHeader());
+        routeContainer.add(factoryPanel.createRouteHeader());
         routeContainer.add(Box.createVerticalStrut(10));
 
         if (routes.isEmpty()) {
@@ -409,12 +390,12 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
             routeContainer.add(Box.createVerticalStrut(50));
         } else {
             for (int i = 0; i < routes.size(); i++) {
-                RoutePanel panel = new RoutePanel(routes.get(i));
+                JPanel panel = factoryPanel.createRoutePanel(routes.get(i));
                 panel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 routeContainer.add(panel);
 
                 if (i < routes.size() - 1) {
-                    routeContainer.add(Box.createVerticalStrut(sizeManager.SPACING_SMALL));
+                    routeContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
                 }
             }
         }
@@ -429,10 +410,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
     @Override
     public void onThemeChange(boolean isDarkMode) {
-        // Just re-apply backgrounds and foregrounds
         setBackground(themeManager.getBackgroundColor());
 
-        if (headerPanel != null) headerPanel.setBackground(themeManager.getBackgroundColor());
         if (centerPanel != null) centerPanel.setBackground(themeManager.getBackgroundColor());
 
         if (currentLocation != null) {
@@ -451,7 +430,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         if (wcText != null) wcText.setForeground(themeManager.getGreen());
         if (wcQuestion != null) wcQuestion.setForeground(themeManager.getForegroundColor());
 
-        // Let ThemeManager refresh all components
         SwingUtilities.invokeLater(() -> {
             themeManager.applyThemeToContainers(this);
             repaint();
@@ -464,7 +442,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         }
     }
 
-    // Utility methods
     private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
         Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
         GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);

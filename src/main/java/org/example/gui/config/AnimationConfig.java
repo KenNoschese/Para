@@ -9,5 +9,4 @@ public class AnimationConfig {
     public final int centerPauseDuration = 2000;
     public final int restartDelay = 1000;
     public final double centerThreshold = 5.0;
-
 }
