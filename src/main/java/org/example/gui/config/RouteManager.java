@@ -1,8 +1,6 @@
 package org.example.gui.config;
 
-import com.mysql.cj.protocol.Resultset;
 import org.example.gui.resources.RouteData;
-
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -21,6 +19,7 @@ public class RouteManager {
 
     public static void connectDB() {
         try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
             con = DriverManager.getConnection(
                     "jdbc:mysql://127.0.0.1:3306/" + db + "?serverTimezone=UTC",
                     uname, pswd
