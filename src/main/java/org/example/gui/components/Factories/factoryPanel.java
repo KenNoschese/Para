@@ -10,6 +10,7 @@ import org.example.gui.appManager.darkModeToggle;
 import org.example.gui.components.RoundingOfPanels;
 import org.example.gui.components.RoundingOfButtons;
 import org.example.gui.components.RoundingOfTextfields;
+import org.example.gui.pages.mainPage;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -136,7 +137,7 @@ public class factoryPanel {
      *  Route Panel
      * ==========================
      */
-    public static JPanel createRoutePanel(RouteData routeData) {
+    public static JPanel createRoutePanel(RouteData routeData, java.util.function.Consumer<RouteData> onClick) {
         ThemeManager themeManager = ThemeManager.getInstance();
 
         RoundingOfPanels routePanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge()) {
@@ -176,7 +177,7 @@ public class factoryPanel {
             }
 
             private void drawTableContent(Graphics2D g2d, Font dataFont) {
-                int[] columnWidths = {150, 100, 100, 600, 100, 100};
+                int[] columnWidths = {300, 150, 150, 300, 100, 100};
                 int[] columnX = new int[6];
                 columnX[0] = 10;
                 for (int i = 1; i < 6; i++) {
@@ -204,6 +205,13 @@ public class factoryPanel {
                     public void mouseEntered(MouseEvent e) {
                         setBackground(hoverColor);
                         repaint();
+                    }
+
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (onClick != null) {
+                            onClick.accept(routeData);
+                        }
                     }
 
                     @Override
@@ -262,7 +270,7 @@ public class factoryPanel {
             }
 
             private void drawHeader(Graphics2D g2d, Font font) {
-                int[] columnWidths = {150, 100, 100, 600, 100, 100};
+                int[] columnWidths = {300, 150, 150, 300, 100, 100};
                 int[] columnX = new int[columnWidths.length];
 
                 columnX[0] = 10;
