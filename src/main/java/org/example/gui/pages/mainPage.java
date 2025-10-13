@@ -15,8 +15,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.function.Consumer;
+
+import static org.example.gui.config.RouteManager.findRoutes;
 
 public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener {
     private Consumer<String> cardChanger;
@@ -35,6 +38,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private RoundingOfPanels recentPanel;
     private JLabel infoLabel, savedLabel, recentLabel;
     private JLabel wcText, wcQuestion;
+    private final ArrayList<RouteData> savedRoutes = new ArrayList<>();
+
 
     public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
@@ -81,7 +86,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         JPanel rightPanel = new JPanel();
         rightPanel.setBackground(themeManager.getBackgroundColor());
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        rightPanel.setPreferredSize(new Dimension(450, 1080));
+        rightPanel.setPreferredSize(new Dimension(550, 1080));
         rightPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         infoLabel = createInfoLabel();
@@ -98,10 +103,10 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
         rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
 
-        recentLabel = createRecentLabel();
-        rightPanel.add(recentLabel);
+//        recentLabel = createRecentLabel();
+//        rightPanel.add(recentLabel);
         rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
-        rightPanel.add(createRecentPanel());
+//        rightPanel.add(createRecentPanel());
 
         return rightPanel;
     }
@@ -110,7 +115,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         JPanel leftPanel = new JPanel();
         leftPanel.setBackground(themeManager.getBackgroundColor());
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
-        leftPanel.setPreferredSize(new Dimension(1050, 1080));
+        leftPanel.setPreferredSize(new Dimension(950, 1080));
         leftPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         leftPanel.add(createTextContainer());
@@ -244,8 +249,71 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
     private RoundingOfPanels createInfoPanel() {
         infoPanel = createStatusPanel();
+        infoPanel.setPreferredSize(new Dimension(550, 400));
+        infoPanel.setMinimumSize(new Dimension(550, 400));
+        infoPanel.setMaximumSize(new Dimension(550, 400));
+
         setInfoMessage("No chosen route.");
         return infoPanel;
+    }
+
+
+    private void displayRouteInfo(RouteData route) {
+        String stopsDisplay = String.join(" ➡ ", route.getRoute_stops());
+        infoPanel.removeAll();
+
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(themeManager.getBlue());
+        infoPanel.setAlignmentX(CENTER_ALIGNMENT);
+
+        try {
+            JLabel title = new JLabel(route.getRoute() + "     " + route.getETA() + "min. ");
+            title.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16f));
+            title.setForeground(themeManager.getBlack());
+            title.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            RoundingOfButtons save = new RoundingOfButtons("Save");
+            save.setText("💾 Save Route");
+            save.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
+            save.setBackground(themeManager.getYellow());
+            save.setForeground(themeManager.getBlack());
+            save.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+
+            save.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    setSavedRoutes(route);
+                }
+            });
+
+
+
+            JLabel details = new JLabel("<html>" +
+                    "Transfers: " + route.getTransfers() + "<br>" +
+                    "Stops: " + route.getstops() + "<br>" +
+                    "Details: " + route.getDetails() + "<br>" +
+                    "Fare: Php " + String.format("%.2f", route.getFare()) + "<br>" +
+                    stopsDisplay + "<br>" +
+                    "</html>");
+            details.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
+            details.setForeground(themeManager.getBlack());
+            details.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            infoPanel.add(Box.createVerticalStrut(20));
+            infoPanel.add(title);
+            infoPanel.add(Box.createVerticalStrut(10));
+            infoPanel.add(details);
+            infoPanel.add(save);
+            infoPanel.add(Box.createVerticalGlue());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            setInfoMessage("Error displaying route info.");
+        }
+
+        infoPanel.revalidate();
+        infoPanel.repaint();
     }
 
     public void setInfoMessage(String message) {
@@ -254,61 +322,127 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
     private RoundingOfPanels createSavedPanel() {
         savedPanel = createStatusPanel();
-        setSavedRoutes(new ArrayList<>());
+        savedPanel.setPreferredSize(new Dimension(550, 300));
+        savedPanel.setMinimumSize(new Dimension(550, 300));
+        savedPanel.setMaximumSize(new Dimension(550, 300));
+        setPanelPlaceholder(savedPanel, "No saved routes.");
         return savedPanel;
     }
 
-    public void setSavedRoutes(ArrayList<String> routes) {
+    public void setSavedRoutes(RouteData route) {
+        for (RouteData saved : savedRoutes) {
+//            if (saved.getRoute().equalsIgnoreCase(route.getRoute())) {
+//                JOptionPane.showMessageDialog(this,
+//                        "This route is already saved!",
+//                        "Notice",
+//                        JOptionPane.INFORMATION_MESSAGE);
+//                return;
+//            }
+        }
+
+        // Add to saved list
+        savedRoutes.add(route);
+
+        // Update UI
+        refreshSavedRoutesPanel();
+    }
+
+    private void refreshSavedRoutesPanel() {
         savedPanel.removeAll();
-        if (routes.isEmpty()) {
+
+        if (savedRoutes.isEmpty()) {
             setPanelPlaceholder(savedPanel, "No saved routes.");
         } else {
-            for (String route : routes) {
-                JPanel row = new JPanel(new BorderLayout());
-                row.setOpaque(false);
+            savedPanel.setLayout(new BoxLayout(savedPanel, BoxLayout.Y_AXIS));
 
-                JLabel routeLabel = new JLabel(route);
-                JButton removeButton = new JButton("Remove");
+            savedPanel.add(Box.createVerticalStrut(20));
+            for (RouteData savedRoute : savedRoutes) {
+                RoundingOfPanels routePanel = new RoundingOfPanels(30);
+                routePanel.setLayout(new BorderLayout());
+                routePanel.setBackground(themeManager.getWhite());
+                routePanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                routePanel.setMaximumSize(new Dimension(500, 40));
 
-                removeButton.addActionListener(e -> {
-                    routes.remove(route);
-                    setSavedRoutes(routes);
+                JLabel routeLabel = new JLabel("<html>" + savedRoute.getFromLocation() + " to " + savedRoute.getDestination() + " <b><i>&nbsp;via&nbsp;</i></b> " +
+                        savedRoute.getRoute() + " &nbsp;&nbsp;(" + savedRoute.getETA() + " min)" + "</html>");
+                try {
+                    routeLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
+                } catch (Exception e) {
+                    routeLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+                }
+                routeLabel.setForeground(themeManager.getBlack());
+
+                routeLabel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        displayRouteInfo(savedRoute);
+                    }
+
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        routeLabel.setForeground(themeManager.getGreen());
+                        routeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        routeLabel.setForeground(themeManager.getBlack());
+                    }
                 });
 
-                row.add(routeLabel, BorderLayout.CENTER);
-                row.add(removeButton, BorderLayout.EAST);
-                savedPanel.add(row);
+                // ❌ Remove button
+                JButton removeButton = new JButton("✖");
+                removeButton.setPreferredSize(new Dimension(30, 30));
+                removeButton.setFocusPainted(false);
+                removeButton.setBackground(themeManager.getWhite());
+                removeButton.setForeground(Color.RED);
+                removeButton.setBorder(BorderFactory.createEmptyBorder());
+                removeButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+                removeButton.addActionListener(e -> {
+                    savedRoutes.remove(savedRoute);
+                    refreshSavedRoutesPanel();
+                });
+
+                savedPanel.add(Box.createVerticalStrut(10));
+                routePanel.add(routeLabel, BorderLayout.CENTER);
+                routePanel.add(removeButton, BorderLayout.EAST);
+
+                savedPanel.add(routePanel);
+                savedPanel.add(Box.createVerticalStrut(5));
             }
         }
+
         savedPanel.revalidate();
         savedPanel.repaint();
     }
 
-    private RoundingOfPanels createRecentPanel() {
-        recentPanel = createStatusPanel();
-        setRecentSearches(new ArrayList<>());
-        return recentPanel;
-    }
+//    private RoundingOfPanels createRecentPanel() {
+//        recentPanel = createStatusPanel();
+//        setRecentSearches(new ArrayList<>());
+//        return recentPanel;
+//    }
 
-    public void setRecentSearches(ArrayList<String> searches) {
-        recentPanel.removeAll();
-        if (searches.isEmpty()) {
-            setPanelPlaceholder(recentPanel, "No recent searches.");
-        } else {
-            for (String search : searches) {
-                JLabel searchLabel = new JLabel(search);
-                recentPanel.add(searchLabel);
-            }
-        }
-        recentPanel.revalidate();
-        recentPanel.repaint();
-    }
+//    public void setRecentSearches(ArrayList<String> searches) {
+//        recentPanel.removeAll();
+//        if (searches.isEmpty()) {
+//            setPanelPlaceholder(recentPanel, "No recent searches.");
+//        } else {
+//            for (String search : searches) {
+//                JLabel searchLabel = new JLabel(search);
+//                recentPanel.add(searchLabel);
+//            }
+//        }
+//        recentPanel.revalidate();
+//        recentPanel.repaint();
+//    }
 
     private JLabel createInfoLabel() throws IOException, FontFormatException {
         infoLabel = new JLabel("Route Info");
         infoLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
         infoLabel.setForeground(themeManager.getForegroundColor());
         infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         return infoLabel;
     }
 
@@ -320,13 +454,13 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return savedLabel;
     }
 
-    private JLabel createRecentLabel() throws IOException, FontFormatException {
-        recentLabel = new JLabel("Recent Searches");
-        recentLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
-        recentLabel.setForeground(themeManager.getForegroundColor());
-        recentLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        return recentLabel;
-    }
+//    private JLabel createRecentLabel() throws IOException, FontFormatException {
+//        recentLabel = new JLabel("Recent Searches");
+//        recentLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
+//        recentLabel.setForeground(themeManager.getForegroundColor());
+//        recentLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+//        return recentLabel;
+//    }
 
     private JPanel createRouteContainer() {
         JPanel mainContainer = new JPanel();
@@ -363,13 +497,15 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 return;
             }
 
-            ArrayList<RouteData> foundRoutes = routeManager.findRoutes(from, to);
+            ArrayList<RouteData> foundRoutes = RouteManager.findRoutes(from, to);
             displayRoutes(foundRoutes, from, to);
         } catch (IOException | FontFormatException ex) {
             JOptionPane.showMessageDialog(this,
                     "Error searching routes: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -390,7 +526,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
             routeContainer.add(Box.createVerticalStrut(50));
         } else {
             for (int i = 0; i < routes.size(); i++) {
-                JPanel panel = factoryPanel.createRoutePanel(routes.get(i));
+                JPanel panel = factoryPanel.createRoutePanel(routes.get(i), this::displayRouteInfo);
                 panel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 routeContainer.add(panel);
 
@@ -402,10 +538,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
         routeContainer.revalidate();
         routeContainer.repaint();
-    }
-
-    public void reloadRoutes() throws IOException {
-        routeManager.reloadRoutes();
     }
 
     @Override

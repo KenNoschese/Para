@@ -9,13 +9,12 @@ public class routeManager {
 
     static String db = "route_schema"; // change if needed
     static String uname = "root";
-    static String pswd = "1234";
+    static String pswd = "Ken11514!";
 
     public static void main(String[] args) {
         connectDB();
 
-        // Example: find routes from Bangkal to Roxas
-        findRoutes("Bangkal", "Roxas");
+        findRoutes("CM Recto", "Puan");
 
         closeConnection();
     }
@@ -62,7 +61,6 @@ public class routeManager {
                         "JOIN Stops s_to ON rs_to.stop_id = s_to.stop_id " +
                         "WHERE s_from.stop_name = '" + from + "' " +
                         "AND s_to.stop_name = '" + to + "' " +
-                        "AND rs_from.stop_order < rs_to.stop_order " +
                         "GROUP BY r.route_name, j.plate_number;";
         runQuery(sql);
     }
