@@ -1,10 +1,10 @@
 package org.example.gui.pages;
 
+import org.example.DatabaseManager.RouteDatabase.RouteManager;
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.appManager.sizeManager;
 import org.example.gui.components.*;
 import org.example.gui.resources.RouteData;
-import org.example.gui.config.RouteManager;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.fonts;
 import org.example.gui.components.Factories.factoryPanel;
@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.function.Consumer;
-
-import static org.example.gui.config.RouteManager.findRoutes;
 
 public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener {
     private Consumer<String> cardChanger;
@@ -496,8 +494,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
-
-            ArrayList<RouteData> foundRoutes = RouteManager.findRoutes(from, to);
+            RouteManager routeManager = new RouteManager();
+            ArrayList<RouteData> foundRoutes = routeManager.findRoutes(from, to, "Student");
             displayRoutes(foundRoutes, from, to);
         } catch (IOException | FontFormatException ex) {
             JOptionPane.showMessageDialog(this,

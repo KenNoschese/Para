@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class RouteData {
     private ArrayList<String> route_stops = new ArrayList<>();
-    private String fromLocation, destination, route,  details = "Fastest";
+    private String fromLocation, destination, route, details = "Fastest";
     private int transfers, ETA, distance, stops;
     private double fare;
 
@@ -25,7 +25,7 @@ public class RouteData {
     }
 
     public ArrayList<String> getRoute_stops() {
-        return  route_stops;
+        return route_stops;
     }
 
     public int getTransfers() {
@@ -83,7 +83,51 @@ public class RouteData {
     public void setDistance(int distance) {
         this.distance = distance;
     }
+
     public void setFare(double fare) {
         this.fare = fare;
+    }
+
+    public int getStops() {
+        return getstops();
+    }
+
+    public ArrayList<String> getRouteStops() {
+        return getRoute_stops();
+    }
+
+    public void setRouteStops(ArrayList<String> stops) {
+        setRoute_stops(stops);
+    }
+
+    public int getEta() {
+        return getETA();
+    }
+
+    public void setEta(int eta) {
+        setETA(eta);
+    }
+
+    public void setDistanceKm(int distanceKm) {
+        setDistance(distanceKm);
+    }
+
+    public int getDistanceKm() {
+        return getDistance();
+    }
+
+    @Override
+    public String toString() {
+        return "RouteData{" +
+                "route='" + route + '\'' +
+                ", fromLocation='" + fromLocation + '\'' +
+                ", destination='" + destination + '\'' +
+                ", ETA=" + ETA +
+                ", stops=" + stops +
+                ", distance=" + distance +
+                ", fare=" + fare +
+                ", details='" + details + '\'' +
+                ", route_stops=" + route_stops +
+                '}';
     }
 }
