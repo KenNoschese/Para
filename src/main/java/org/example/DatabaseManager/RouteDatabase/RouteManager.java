@@ -1,15 +1,69 @@
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
-import org.example.DatabaseManager.RouteDatabase.RouteComponent;
-import org.example.DatabaseManager.RouteDatabase.Routes;
-import org.example.DatabaseManager.RouteDatabase.Segments;
 import org.example.gui.resources.RouteData;
 
 import java.sql.*;
 import java.util.ArrayList;
 
 public class RouteManager {
+    public static void main(String[] args) { //Main method is debug only, delete later
+        try {
+            RouteManager manager = new RouteManager();
+            NavigationFacade navigator = new NavigationFacade();
+            String from = "matina crossing";
+            String to = "roxas avenue";
+            String category = "student";
+            String priority = "fare"; // or "distance" or "eta"
+                                        //Logic behind priority is user may choose which priority they want to find the best possible route. Add buttons in UI for this.
+
+            ArrayList<RouteData> routes = manager.findRoutes(from, to, category); //Prints out all possible routes
+            RouteData bestRoute = navigator.findBestRoute(from, to, category, priority); //Facade Pattern calls here, prints out one best route
+
+            // Best Route
+            if (bestRoute == null) {
+                System.out.println("No matching route found for " + from + " → " + to);
+                return;
+            }
+            System.out.println("===================================");
+            System.out.println("🚍 Best Route Found:");
+            System.out.println("Route: " + bestRoute.getRoute());
+            System.out.println("From: " + bestRoute.getFromLocation());
+            System.out.println("To: " + bestRoute.getDestination());
+            System.out.println("Stops: " + bestRoute.getStops());
+            System.out.println("Distance: " + bestRoute.getDistance() + " km");
+            System.out.println("ETA: " + bestRoute.getETA() + " mins");
+            System.out.println("Fare: ₱" + String.format("%.2f", bestRoute.getFare()));
+            System.out.println("Category: " + bestRoute.getDetails());
+            System.out.println("Stops along the way: " + bestRoute.getRoute_stops());
+            System.out.println("===================================");
+
+            // All routes
+            if (routes.isEmpty()) {
+                System.out.println("No matching route found for " + from + " → " + to);
+            } else {
+                for (RouteData route : routes) {
+                    System.out.println("===================================");
+                    System.out.println("Route: " + route.getRoute());
+                    System.out.println("From: " + route.getFromLocation());
+                    System.out.println("To: " + route.getDestination());
+                    System.out.println("Stops: " + route.getStops());
+                    System.out.println("Distance: " + route.getDistance() + " km");
+                    System.out.println("ETA: " + route.getETA() + " mins");
+                    System.out.println("Fare: ₱" + String.format("%.2f", route.getFare()));
+                    System.out.println("Category: " + route.getDetails());
+                    System.out.println("Stops along the way: " + route.getRoute_stops());
+                    System.out.println("===================================");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("SQL Error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Unexpected error: " + e.getMessage());
+        }
+    }
+
     private final Connection con;
 
     public RouteManager() {
@@ -68,8 +122,6 @@ public class RouteManager {
             GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order;
         """;
 
-
-
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, from);
             pst.setString(2, to);
@@ -81,14 +133,13 @@ public class RouteManager {
                     int routeId = rs.getInt("route_id");
                     String routeName = rs.getString("route_name");
                     double distanceKm = rs.getDouble("distance_km");
-//                  int eta = rs.getInt("total_eta_minutes");
                     int stops = rs.getInt("stops");
 
                     double baseFare = rs.getDouble("base_fare");
                     double baseDist = rs.getDouble("base_distance_km");
                     double perKmRate = rs.getDouble("per_km_rate");
 
-                    // ✅ Fare calculation
+                    // Fare calculation
                     double fare = baseFare;
                     if (distanceKm > baseDist) {
                         fare += (distanceKm - baseDist) * perKmRate;
@@ -98,18 +149,17 @@ public class RouteManager {
                     double discount = getDiscountRate(category);
                     double finalFare = fare * (1 - discount);
 
-                    ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
+                    // ETA calculation (3 minutes per km)
+                    int eta = (int) Math.ceil(distanceKm * 3);
 
-                    Routes routeComposite = new Routes(routeName);
-                    Segments segment = new Segments(from, to, distanceKm, finalFare);
-                    routeComposite.addSegment(segment);
+                    ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
 
                     RouteData data = new RouteData();
                     data.setRoute(routeName);
                     data.setFromLocation(from);
                     data.setDestination(to);
                     data.setStops(stops);
-//                  data.setETA(eta);
+                    data.setETA(eta); // ✅ set ETA
                     data.setDistance((int) distanceKm);
                     data.setFare(finalFare);
                     data.setDetails(category);
@@ -144,7 +194,7 @@ public class RouteManager {
                 return fromOrder < toOrder;
             }
         } catch (SQLException e) {
-            System.out.println("⚠️ Direction detection failed: " + e.getMessage());
+            System.out.println("Direction detection failed: " + e.getMessage());
         }
         return true;
     }

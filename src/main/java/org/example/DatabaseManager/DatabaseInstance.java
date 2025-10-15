@@ -11,29 +11,60 @@ public class DatabaseInstance {
     private Statement statement;
 
     private final String db = "route_schema";
-    private final String uname = "root";
-    private final String pswd = "Ken11514!";
+    private String uname = "root";
+    private String pswd = "1234";
 
-    private DatabaseInstance() {
+    private DatabaseInstance(String uname, String pswd) {
         try {
+            this.uname = uname;
+            this.pswd = pswd;
+
             Class.forName("com.mysql.cj.jdbc.Driver");
             connection = DriverManager.getConnection(
                     "jdbc:mysql://127.0.0.1:3306/" + db + "?serverTimezone=UTC",
                     uname, pswd
             );
             statement = connection.createStatement();
-            System.out.println("✅ Connected to database (singleton): " + db);
+
+            System.out.println("Connected to database as: " + uname);
         } catch (Exception e) {
-            System.out.println("❌ Database connection failed: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Failed to connect as " + uname + ": " + e.getMessage());
         }
+    }
+
+    private DatabaseInstance() {
+        this("root", "1234");
     }
 
     public static synchronized DatabaseInstance getInstance() {
         if (instance == null) {
-            instance = new DatabaseInstance();
+            instance = new DatabaseInstance(); // default root
         }
         return instance;
+    }
+
+    public static synchronized boolean loginAsUser(String username, String password) {
+        try {
+            if (instance != null) {
+                instance.close();
+            }
+
+            instance = new DatabaseInstance(username, password);
+
+            if (instance.connection != null && instance.connection.isValid(2)) {
+                System.out.println("Logged in successfully as " + username);
+                return true;
+            } else {
+                System.out.println("⚠Login failed for " + username);
+                instance = null;
+                return false;
+            }
+
+        } catch (SQLException e) {
+            System.out.println("SQL Error during login: " + e.getMessage());
+            instance = null;
+            return false;
+        }
     }
 
     public Connection getConnection() {
@@ -48,11 +79,18 @@ public class DatabaseInstance {
         try {
             if (statement != null) statement.close();
             if (connection != null) connection.close();
+            System.out.println("Database connection closed for user: " + uname);
             instance = null;
-            System.out.println("🧹 Singleton database connection closed.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
-}
 
+    public String getActiveUsername() {
+        return uname;
+    }
+
+    public String getActivePassword() {
+        return pswd;
+    }
+}
