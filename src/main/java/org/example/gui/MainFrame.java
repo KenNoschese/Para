@@ -4,7 +4,6 @@ import org.example.gui.appManager.sizeManager;
 import org.example.gui.pages.loginPage;
 import org.example.gui.pages.landingPage;
 import org.example.gui.pages.mainPage;
-import org.example.gui.pages.signupPage;
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,7 +31,6 @@ public class MainFrame extends JFrame {
 
         try {
             mainPanel.add(new loginPage(this::changeCard), "LOGIN");
-            mainPanel.add(new signupPage(this::changeCard), "SIGNUP");
             mainPanel.add(new landingPage(this::changeCard), "LANDING");
             mainPanel.add(new mainPage(this::changeCard), "MAIN");
         } catch (Exception e) {

@@ -415,11 +415,6 @@ public class factoryPanel {
         signUpButton.setBorder(BorderFactory.createEmptyBorder());
         signUpButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        signUpButton.addActionListener(e -> {
-            System.out.println("➡️ Sign Up button clicked");
-            cardChanger.accept("SIGNUP");
-        });
-
         JLabel orLabel = new JLabel("or", SwingConstants.CENTER);
         orLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
         orLabel.setForeground(Color.GRAY);
@@ -433,61 +428,7 @@ public class factoryPanel {
         loginButton.setBackground(themeManager.getRed());
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // ✅ Updated Login Button functionality using DatabaseInstance.loginAsUser()
-
-        loginButton.addActionListener(e -> {
-            String username = usernameField.getText().trim();
-            String password = passwordField.getText().trim();
-
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(mainPanel, "Please enter both username and password.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            char firstDigit = password.charAt(0);
-            String category;
-            if (firstDigit == '1') category = "Regular";
-            else if (firstDigit == '2') category = "Student";
-            else if (firstDigit == '3') category = "PWD";
-            else if (firstDigit == '4') category = "Senior Citizen";
-            else category = "Unknown";
-
-            if (category.equals("Unknown")) {
-                JOptionPane.showMessageDialog(mainPanel, "Invalid password format. Cannot identify category.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            try {
-                System.out.println("Attempting login for user: " + username + " (" + category + ")");
-
-                boolean success = org.example.DatabaseManager.DatabaseInstance.loginAsUser(username, password);
-
-                if (success) {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "✅ Login successful!\nWelcome, " + username + " (" + category + ")",
-                            "Login Success", JOptionPane.INFORMATION_MESSAGE);
-
-                    System.out.println("✅ Logged in as: " + username + " (" + category + ")");
-
-                    cardChanger.accept("LANDING");
-
-                } else {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "Invalid username or password.",
-                            "Login Failed", JOptionPane.ERROR_MESSAGE);
-                    System.out.println("Login failed for user: " + username);
-                }
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Unexpected error: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                System.out.println("Unexpected error: " + ex.getMessage());
-            }
-        });
+        loginButton.addActionListener(e -> cardChanger.accept("LANDING"));
 
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
@@ -506,4 +447,5 @@ public class factoryPanel {
 
         return mainPanel;
     }
+
 }
