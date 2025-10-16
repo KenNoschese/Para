@@ -12,7 +12,7 @@ public class DatabaseInstance {
 
     private final String db = "route_schema";
     private String uname = "root";
-    private String pswd = "1234";
+    private String pswd = "Ken11514!";
 
     private DatabaseInstance(String uname, String pswd) {
         try {
@@ -27,13 +27,16 @@ public class DatabaseInstance {
             statement = connection.createStatement();
 
             System.out.println("Connected to database as: " + uname);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.err.println("Failed to connect as " + uname + ": " + e.getMessage());
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
     private DatabaseInstance() {
-        this("root", "1234");
+        this("root", "Ken11514!");
     }
 
     public static synchronized DatabaseInstance getInstance() {
