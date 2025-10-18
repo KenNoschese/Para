@@ -41,14 +41,8 @@ public class UserManager {
                 }
             }
 
-            System.out.println("Signing up user...");
-            System.out.println("Category: " + category);
-            System.out.println("Target table: " + table);
-
-            // Insert user into proper table
             String insertQuery = String.format("INSERT INTO %s (%s) VALUES ('%s')", table, nameColumn, name);
             st.executeUpdate(insertQuery);
-            System.out.println("✅ User inserted successfully into " + table);
 
             // Retrieve the new auto-incremented ID
             int newId = 0;
@@ -63,10 +57,6 @@ public class UserManager {
             String firstName = name.split(" ")[0];
             String username = firstName;
             String password = newId + firstName;
-
-            System.out.println("Creating DB user...");
-            System.out.println("Username: " + username);
-            System.out.println("Password: " + password);
 
             st.executeUpdate(String.format("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'", username, password));
             System.out.println("Database user created: " + username);

@@ -39,14 +39,14 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private final ArrayList<RouteData> savedRoutes = new ArrayList<>();
 
 
-    public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+    public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException, SQLException {
         this.cardChanger = cardChanger;
         this.themeManager = ThemeManager.getInstance();
         this.themeManager.addThemeChangeListener(this);
         setupPanel();
     }
 
-    private void setupPanel() throws IOException, FontFormatException {
+    private void setupPanel() throws IOException, FontFormatException, SQLException {
         this.routeManager = new RouteManager();
         setLayout(new BorderLayout());
         setPreferredSize(sizeManager.getInstance().flexibleWidth(1920, 1080));
@@ -272,20 +272,17 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
             RoundingOfButtons save = new RoundingOfButtons("Save");
             save.setText("💾 Save Route");
+            RoundingOfButtons out = new RoundingOfButtons("I'm off the jeep");
             save.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
             save.setBackground(themeManager.getYellow());
             save.setForeground(themeManager.getBlack());
             save.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-
             save.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     setSavedRoutes(route);
                 }
             });
-
-
 
             JLabel details = new JLabel("<html>" +
                     "Transfers: " + route.getTransfers() + "<br>" +
@@ -603,6 +600,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 frame.setVisible(true);
             } catch (IOException | FontFormatException e) {
                 e.printStackTrace();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
         });
     }

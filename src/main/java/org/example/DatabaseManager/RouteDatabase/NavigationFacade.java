@@ -1,20 +1,33 @@
 package org.example.DatabaseManager.RouteDatabase;
 
+import org.example.DatabaseManager.RouteDatabase.StrategyClasses.LeastTransferStrategy;
+import org.example.DatabaseManager.RouteDatabase.StrategyClasses.RouteStrategy;
+import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestDistanceStrategy;
+import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestTimeStrategy;
 import org.example.gui.resources.RouteData;
-
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Optional;
 
 public class NavigationFacade {
 
     private final RouteManager routeManager;
+    private RouteStrategy routeStrategy; // 🧠 Strategy Pattern field
 
-    public NavigationFacade() {
+    public NavigationFacade() throws SQLException {
         this.routeManager = new RouteManager();
     }
 
+    /**
+     * Allows changing the route-finding strategy at runtime.
+     */
+    public void setRouteStrategy(RouteStrategy routeStrategy) {
+        this.routeStrategy = routeStrategy;
+    }
+
+    /**
+     * Finds the best route based on the user's selected strategy (distance, time, transfers, fare, etc.)
+     */
     public RouteData findBestRoute(String from, String to, String category, String priority) throws SQLException {
         ArrayList<RouteData> possibleRoutes = routeManager.findRoutes(from, to, category);
 
@@ -23,16 +36,15 @@ public class NavigationFacade {
             return null;
         }
 
-        Comparator<RouteData> comparator = switch (priority.toLowerCase()) {
-            case "distance" -> Comparator.comparingDouble(RouteData::getDistance);
-            case "eta" -> Comparator.comparingInt(RouteData::getETA);
-            case "fare" -> Comparator.comparingDouble(RouteData::getFare);
-            default -> Comparator.comparingDouble(RouteData::getFare); // default to fare
-        };
+        switch (priority.toLowerCase()) {
+            case "distance" -> setRouteStrategy(new ShortestDistanceStrategy());
+            case "eta", "time" -> setRouteStrategy(new ShortestTimeStrategy());
+            case "transfers", "stops" -> setRouteStrategy(new LeastTransferStrategy());
+            default -> setRouteStrategy(new ShortestDistanceStrategy()); // default to distance
+        }
 
-        Optional<RouteData> bestRoute = possibleRoutes.stream().min(comparator);
+        Optional<RouteData> bestRoute = routeStrategy.findBestRoute(possibleRoutes);
 
         return bestRoute.orElse(null);
     }
 }
-

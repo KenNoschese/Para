@@ -12,7 +12,7 @@ public class DatabaseInstance {
 
     private final String db = "route_schema";
     private String uname = "root";
-    private String pswd = "Ken11514!";
+    private String pswd = "1234";
 
     private DatabaseInstance(String uname, String pswd) {
         try {
@@ -28,7 +28,6 @@ public class DatabaseInstance {
 
             System.out.println("Connected to database as: " + uname);
         } catch (SQLException e) {
-            System.err.println("Failed to connect as " + uname + ": " + e.getMessage());
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -36,7 +35,7 @@ public class DatabaseInstance {
     }
 
     private DatabaseInstance() {
-        this("root", "Ken11514!");
+        this("root", "1234");
     }
 
     public static synchronized DatabaseInstance getInstance() {
@@ -55,16 +54,13 @@ public class DatabaseInstance {
             instance = new DatabaseInstance(username, password);
 
             if (instance.connection != null && instance.connection.isValid(2)) {
-                System.out.println("Logged in successfully as " + username);
                 return true;
             } else {
-                System.out.println("⚠Login failed for " + username);
                 instance = null;
                 return false;
             }
 
         } catch (SQLException e) {
-            System.out.println("SQL Error during login: " + e.getMessage());
             instance = null;
             return false;
         }
@@ -82,7 +78,6 @@ public class DatabaseInstance {
         try {
             if (statement != null) statement.close();
             if (connection != null) connection.close();
-            System.out.println("Database connection closed for user: " + uname);
             instance = null;
         } catch (SQLException e) {
             e.printStackTrace();

@@ -1,78 +1,60 @@
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
+import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
+import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneySubject;
 import org.example.gui.resources.RouteData;
 
 import java.sql.*;
 import java.util.ArrayList;
 
+/**
+ * RouteManager serves as a high-level interface to:
+ *  - Fetch routes between locations
+ *  - Handle fare and ETA computation
+ *  - Manage Jeepney observer updates for passenger boarding/leaving
+ */
 public class RouteManager {
-    public static void main(String[] args) { //Main method is debug only, delete later
-        try {
-            RouteManager manager = new RouteManager();
-            NavigationFacade navigator = new NavigationFacade();
-            String from = "matina crossing";
-            String to = "roxas avenue";
-            String category = "student";
-            String priority = "fare"; // or "distance" or "eta"
-                                        //Logic behind priority is user may choose which priority they want to find the best possible route. Add buttons in UI for this.
+    private final Connection con;
+    private final JeepneySubject jeepneySubject;
 
-            ArrayList<RouteData> routes = manager.findRoutes(from, to, category); //Prints out all possible routes
-            RouteData bestRoute = navigator.findBestRoute(from, to, category, priority); //Facade Pattern calls here, prints out one best route
+    public RouteManager() throws SQLException {
+        this.con = DatabaseInstance.getInstance().getConnection();
+        this.jeepneySubject = new JeepneySubject();
+    }
 
-            // Best Route
-            if (bestRoute == null) {
-                System.out.println("No matching route found for " + from + " → " + to);
-                return;
-            }
-            System.out.println("===================================");
-            System.out.println("🚍 Best Route Found:");
-            System.out.println("Route: " + bestRoute.getRoute());
-            System.out.println("From: " + bestRoute.getFromLocation());
-            System.out.println("To: " + bestRoute.getDestination());
-            System.out.println("Stops: " + bestRoute.getStops());
-            System.out.println("Distance: " + bestRoute.getDistance() + " km");
-            System.out.println("ETA: " + bestRoute.getETA() + " mins");
-            System.out.println("Fare: ₱" + String.format("%.2f", bestRoute.getFare()));
-            System.out.println("Category: " + bestRoute.getDetails());
-            System.out.println("Stops along the way: " + bestRoute.getRoute_stops());
-            System.out.println("===================================");
-
-            // All routes
-            if (routes.isEmpty()) {
-                System.out.println("No matching route found for " + from + " → " + to);
-            } else {
-                for (RouteData route : routes) {
-                    System.out.println("===================================");
-                    System.out.println("Route: " + route.getRoute());
-                    System.out.println("From: " + route.getFromLocation());
-                    System.out.println("To: " + route.getDestination());
-                    System.out.println("Stops: " + route.getStops());
-                    System.out.println("Distance: " + route.getDistance() + " km");
-                    System.out.println("ETA: " + route.getETA() + " mins");
-                    System.out.println("Fare: ₱" + String.format("%.2f", route.getFare()));
-                    System.out.println("Category: " + route.getDetails());
-                    System.out.println("Stops along the way: " + route.getRoute_stops());
-                    System.out.println("===================================");
-                }
-            }
-
-        } catch (SQLException e) {
-            System.out.println("SQL Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Unexpected error: " + e.getMessage());
+    // ✅ Register UI components (like testPage or mainPage) as observers
+    public void addJeepneyObserver(JeepneyObserver observer) {
+        if (observer != null) {
+            jeepneySubject.registerObserver(observer);
         }
     }
 
-    private final Connection con;
-
-    public RouteManager() {
-        this.con = DatabaseInstance.getInstance().getConnection();
+    // ✅ When user boards a jeepney
+    public void boardJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.boardJeepney(plateNumber);
     }
 
+    // ✅ When user leaves a jeepney
+    public void leaveJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.leaveJeepney(plateNumber);
+    }
+
+    // ✅ Show current jeepney states (for debugging)
+    public void showAllJeepneys() throws SQLException {
+        jeepneySubject.showAllJeepneys();
+    }
+
+    // ✅ Graceful DB close
+    public void close() throws SQLException {
+        if (con != null && !con.isClosed()) {
+            con.close();
+        }
+    }
+
+    // ✅ Core method for fetching routes based on input
     public ArrayList<RouteData> findRoutes(String from, String to, String category) throws SQLException {
         ArrayList<RouteData> routes = new ArrayList<>();
-
         boolean isInbound = detectDirection(from, to);
 
         String sql = """
@@ -101,23 +83,9 @@ public class RouteManager {
             WHERE s_from.stop_name = ?
               AND s_to.stop_name = ?
               AND (
-                  ( ? = TRUE  AND rs_to.stop_order = (
-                      SELECT MIN(rs_to2.stop_order)
-                      FROM Route_Stops rs_to2
-                      JOIN Stops s_to2 ON rs_to2.stop_id = s_to2.stop_id
-                      WHERE rs_to2.route_id = r.route_id
-                        AND s_to2.stop_name = s_to.stop_name
-                        AND rs_to2.stop_order > rs_from.stop_order
-                  ))
+                  ( ? = TRUE  AND rs_to.stop_order > rs_from.stop_order )
                   OR
-                  ( ? = FALSE AND rs_to.stop_order = (
-                      SELECT MAX(rs_to2.stop_order)
-                      FROM Route_Stops rs_to2
-                      JOIN Stops s_to2 ON rs_to2.stop_id = s_to2.stop_id
-                      WHERE rs_to2.route_id = r.route_id
-                        AND s_to2.stop_name = s_to.stop_name
-                        AND rs_to2.stop_order < rs_from.stop_order
-                  ))
+                  ( ? = FALSE AND rs_to.stop_order < rs_from.stop_order )
               )
             GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order;
         """;
@@ -139,7 +107,7 @@ public class RouteManager {
                     double baseDist = rs.getDouble("base_distance_km");
                     double perKmRate = rs.getDouble("per_km_rate");
 
-                    // Fare calculation
+                    // 🧮 Fare computation
                     double fare = baseFare;
                     if (distanceKm > baseDist) {
                         fare += (distanceKm - baseDist) * perKmRate;
@@ -149,7 +117,7 @@ public class RouteManager {
                     double discount = getDiscountRate(category);
                     double finalFare = fare * (1 - discount);
 
-                    // ETA calculation (3 minutes per km)
+                    // ETA = 3 minutes per km
                     int eta = (int) Math.ceil(distanceKm * 3);
 
                     ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
@@ -159,7 +127,7 @@ public class RouteManager {
                     data.setFromLocation(from);
                     data.setDestination(to);
                     data.setStops(stops);
-                    data.setETA(eta); // ✅ set ETA
+                    data.setETA(eta);
                     data.setDistance((int) distanceKm);
                     data.setFare(finalFare);
                     data.setDetails(category);
@@ -173,6 +141,7 @@ public class RouteManager {
         return routes;
     }
 
+    // ✅ Detect route direction (inbound/outbound)
     private boolean detectDirection(String from, String to) {
         String dirQuery = """
             SELECT rs_from.stop_order AS from_order, rs_to.stop_order AS to_order
@@ -189,16 +158,15 @@ public class RouteManager {
             pst.setString(2, to);
             ResultSet rs = pst.executeQuery();
             if (rs.next()) {
-                int fromOrder = rs.getInt("from_order");
-                int toOrder = rs.getInt("to_order");
-                return fromOrder < toOrder;
+                return rs.getInt("from_order") < rs.getInt("to_order");
             }
         } catch (SQLException e) {
-            System.out.println("Direction detection failed: " + e.getMessage());
+            System.out.println("[WARN] Direction detection failed: " + e.getMessage());
         }
         return true;
     }
 
+    // ✅ Fetch all stops between 'from' and 'to' for a given route
     private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to) throws SQLException {
         ArrayList<String> stops = new ArrayList<>();
 
@@ -211,14 +179,12 @@ public class RouteManager {
                   (SELECT rsf.stop_order 
                    FROM Route_Stops rsf 
                    JOIN Stops sf ON rsf.stop_id = sf.stop_id 
-                   WHERE rsf.route_id = ? AND sf.stop_name = ?
-                   LIMIT 1) 
+                   WHERE rsf.route_id = ? AND sf.stop_name = ? LIMIT 1)
               AND 
                   (SELECT rst.stop_order 
                    FROM Route_Stops rst 
                    JOIN Stops st ON rst.stop_id = st.stop_id 
-                   WHERE rst.route_id = ? AND st.stop_name = ?
-                   LIMIT 1)
+                   WHERE rst.route_id = ? AND st.stop_name = ? LIMIT 1)
             ORDER BY rs.stop_order;
         """;
 
@@ -238,6 +204,7 @@ public class RouteManager {
         return stops;
     }
 
+    // ✅ Category discount
     private double getDiscountRate(String category) {
         if (category == null) return 0.0;
         return switch (category.toLowerCase()) {
