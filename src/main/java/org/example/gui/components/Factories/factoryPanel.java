@@ -57,33 +57,110 @@ public class factoryPanel {
             private Timer timer;
             private int x = 0;
             private boolean isPaused = false;
+            private JButton userButton;
 
             {
                 themeManager.addThemeChangeListener(isDarkMode -> {
                     setBackground(themeManager.getWhite());
                     repaint();
                 });
-
                 setupPanel();
+                setupUserButton(); // ✅ added user info button setup
                 setupJeepneyAnimation();
             }
 
             private void setupPanel() throws IOException {
                 setPreferredSize(sizeManager.getInstance().getHeaderSize());
                 setOpaque(false);
-                setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+                setLayout(null);
                 setBackground(themeManager.getWhite());
 
                 JLabel logo = Images.getInstance().getParaLogoLabel(175, 175);
+                logo.setBounds((getWidth() / 2) - 87, 0, 175, 175); // center when resized
+                addComponentListener(new java.awt.event.ComponentAdapter() {
+                    @Override
+                    public void componentResized(java.awt.event.ComponentEvent e) {
+                        logo.setBounds((getWidth() / 2) - 87, 0, 175, 175);
+                    }
+                });
                 add(logo);
-                add(new darkModeToggle());
+
+                add(new darkModeToggle() {{
+                    setBounds(getWidth() - 80, 20, 50, 30);
+                    addComponentListener(new java.awt.event.ComponentAdapter() {
+                        @Override
+                        public void componentResized(java.awt.event.ComponentEvent e) {
+                            setBounds(getWidth() - 80, 20, 50, 30);
+                        }
+                    });
+                }});
 
                 Images images = Images.getInstance();
                 ImageIcon cityIcon = images.getCityIcon();
                 ImageIcon jeepIcon = images.getJeepIcon();
-
                 backgroundImage = cityIcon.getImage().getScaledInstance(1920, 160, Image.SCALE_SMOOTH);
                 jeepney = jeepIcon.getImage().getScaledInstance(config.jeepneyWidth, config.jeepneyHeight, Image.SCALE_SMOOTH);
+            }
+
+            private void setupUserButton() {
+                String username = "Guest";
+                String category = "N/A";
+
+                try {
+                    org.example.DatabaseManager.DatabaseInstance db = org.example.DatabaseManager.DatabaseInstance.getInstance();
+                    username = db.getActiveUsername();
+                    String pswd = db.getActivePassword();
+                    System.out.println("Active user: " + username + ", pass: " + pswd);
+
+                    if (pswd != null && !pswd.isEmpty()) {
+                        char firstDigit = pswd.charAt(0);
+                        if (firstDigit == '1') category = "Regular";
+                        else if (firstDigit == '2') category = "Student";
+                        else if (firstDigit == '3') category = "PWD";
+                        else if (firstDigit == '4') category = "Senior Citizen";
+                    }
+                } catch (Exception ignored) {}
+
+                userButton = new JButton(username + "  (" + category + ")");
+                userButton.setFont(new Font("Arial", Font.BOLD, 14));
+                userButton.setFocusPainted(false);
+                userButton.setBorderPainted(false);
+                userButton.setBackground(new Color(255, 255, 255, 180));
+                userButton.setForeground(themeManager.getBlack());
+                userButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                userButton.setBounds(15, 10, 220, 30);
+                userButton.setHorizontalAlignment(SwingConstants.LEFT);
+
+                // Simple hover + click menu simulation
+                userButton.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        userButton.setBackground(themeManager.getYellow());
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        userButton.setBackground(new Color(255, 255, 255, 180));
+                    }
+
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        JPopupMenu menu = new JPopupMenu();
+                        JMenuItem profileItem = new JMenuItem("Profile");
+                        JMenuItem logoutItem = new JMenuItem("Logout");
+                        logoutItem.addActionListener(evt -> {
+
+                            org.example.DatabaseManager.DatabaseInstance.getInstance().close();
+                            System.exit(0);
+                        });
+                        menu.add(profileItem);
+                        menu.add(logoutItem);
+                        menu.show(userButton, 0, userButton.getHeight());
+                    }
+                });
+
+
+                add(userButton);
             }
 
             private void setupJeepneyAnimation() {
@@ -119,7 +196,6 @@ public class factoryPanel {
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2D = (Graphics2D) g;
-
                 if (backgroundImage != null) {
                     g2D.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
                 }
@@ -384,27 +460,31 @@ public class factoryPanel {
         formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
         formContent.setBackground(themeManager.getWhite());
 
-        JLabel titleLabel = new JLabel("Create an account", SwingConstants.CENTER);
-        titleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 28f));
+        JLabel titleLabel = new JLabel("Enter your username and password", SwingConstants.CENTER);
+        titleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 16f));
         titleLabel.setForeground(themeManager.getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel subtitleLabel = new JLabel("Enter a username and password", SwingConstants.CENTER);
+        JLabel subtitleLabel = new JLabel("Don't have an account?", SwingConstants.CENTER);
         subtitleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        subtitleLabel.setForeground(themeManager.getGray());
+        subtitleLabel.setForeground(themeManager.getBlack());
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JTextField usernameField = new RoundingOfTextfields(0);
+        RoundingOfTextfields usernameField = new RoundingOfTextfields(20);
         usernameField.setMaximumSize(new Dimension(400, 45));
         usernameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        usernameField.setForeground(Color.GRAY);
+        usernameField.setForeground(themeManager.getBlack());
         usernameField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        usernameField.setBorderColor(themeManager.getGray());
+        usernameField.setPlaceholder("Username");
 
-        JTextField passwordField = new RoundingOfTextfields(0);
+        RoundingOfTextfields passwordField = new RoundingOfTextfields(20);
         passwordField.setMaximumSize(new Dimension(400, 45));
         passwordField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        passwordField.setForeground(Color.GRAY);
+        passwordField.setForeground(themeManager.getBlack());
         passwordField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        passwordField.setBorderColor(themeManager.getGray());
+        passwordField.setPlaceholder("Password");
 
         RoundingOfButtons signUpButton = new RoundingOfButtons("Sign Up");
         signUpButton.setArc(30, 30);
@@ -420,9 +500,9 @@ public class factoryPanel {
             cardChanger.accept("SIGNUP");
         });
 
-        JLabel orLabel = new JLabel("or", SwingConstants.CENTER);
+        JLabel orLabel = new JLabel("---------- or ----------", SwingConstants.CENTER);
         orLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
-        orLabel.setForeground(Color.GRAY);
+        orLabel.setForeground(themeManager.getGray());
         orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         RoundingOfButtons loginButton = new RoundingOfButtons("Login");
@@ -491,15 +571,16 @@ public class factoryPanel {
 
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
-        formContent.add(subtitleLabel);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(usernameField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(passwordField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
-        formContent.add(signUpButton);
-        formContent.add(orLabel);
         formContent.add(loginButton);
+        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(subtitleLabel);
+        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
+        formContent.add(signUpButton);
+
 
         formPanel.add(formContent, BorderLayout.CENTER);
         mainPanel.add(formPanel, BorderLayout.CENTER);

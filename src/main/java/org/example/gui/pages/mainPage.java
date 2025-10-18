@@ -31,13 +31,12 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private JPanel welcomeContainer;
     private JPanel inputContainer;
     private RoundingOfButtons submitButton;
+    private JComboBox<String> filter;
     private RoundingOfPanels infoPanel;
     private RoundingOfPanels savedPanel;
-    private RoundingOfPanels recentPanel;
     private JLabel infoLabel, savedLabel, recentLabel;
     private JLabel wcText, wcQuestion;
     private final ArrayList<RouteData> savedRoutes = new ArrayList<>();
-
 
     public mainPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
@@ -53,7 +52,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         setBackground(themeManager.getBackgroundColor());
 
-        // Use FactoryPanel for header and footer
         add(factoryPanel.createHeaderPanel(), BorderLayout.NORTH);
         centerPanel = createCenterPanel();
         add(centerPanel, BorderLayout.CENTER);
@@ -166,18 +164,27 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         currentLocation = new RoundingOfTextfields(26);
         currentLocation.setPreferredSize(new Dimension(250, 40));
         currentLocation.setMaximumSize(new Dimension(250, 40));
+        currentLocation.setFont(fonts.loadCustomFont(fonts.DM_SANS_ITALIC, sizeManager.getInstance().getTextSmall()));
+        currentLocation.setPlaceholder("Current Location");
         currentLocation.setBackground(themeManager.getComponentsColor());
         currentLocation.setForeground(themeManager.getForegroundColor());
 
         destination = new RoundingOfTextfields(26);
         destination.setPreferredSize(new Dimension(250, 40));
         destination.setMaximumSize(new Dimension(250, 40));
+        destination.setFont(fonts.loadCustomFont(fonts.DM_SANS_ITALIC, sizeManager.getInstance().getTextSmall()));
+        destination.setPlaceholder("Destination");
         destination.setBackground(themeManager.getComponentsColor());
         destination.setForeground(themeManager.getForegroundColor());
 
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(null);
+        buttonPanel.setPreferredSize(new Dimension(250, 50));
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+
         submitButton = new RoundingOfButtons("GO");
-        submitButton.setPreferredSize(new Dimension(100, 40));
-        submitButton.setMaximumSize(new Dimension(100, 40));
+        submitButton.setPreferredSize(new Dimension(75, 40));
+        submitButton.setMaximumSize(new Dimension(75, 40));
         submitButton.setBackground(themeManager.getGreen());
         submitButton.setForeground(themeManager.getWhite());
         submitButton.setFont(loadCustomFont(fonts.DM_SANS_BOLD, sizeManager.getInstance().getTextSmall()));
@@ -202,13 +209,27 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         currentLocation.addActionListener(e -> searchRoutes());
         destination.addActionListener(e -> searchRoutes());
 
+
+        String[] options = {"Fastest", "Cheapest", "Shortest"};
+        filter = new JComboBox<>(options);
+        filter.setPreferredSize(new Dimension(100, 30));
+        filter.setMaximumSize(new Dimension(100, 30));
+        filter.setBackground(themeManager.getComponentsColor());
+        filter.setForeground(themeManager.getForegroundColor());
+        filter.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, sizeManager.getInstance().getTextSmall()));
+
+
+        buttonPanel.add(filter);
+        buttonPanel.add(submitButton);
+
         inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         inputContainer.add(currentLocation);
         inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         inputContainer.add(destination);
-        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
-        inputContainer.add(submitButton);
         inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
+        inputContainer.add(buttonPanel);
+        inputContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
+
 
         return inputContainer;
     }
@@ -388,7 +409,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     }
                 });
 
-                // ❌ Remove button
                 JButton removeButton = new JButton("✖");
                 removeButton.setPreferredSize(new Dimension(30, 30));
                 removeButton.setFocusPainted(false);
@@ -415,26 +435,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedPanel.repaint();
     }
 
-//    private RoundingOfPanels createRecentPanel() {
-//        recentPanel = createStatusPanel();
-//        setRecentSearches(new ArrayList<>());
-//        return recentPanel;
-//    }
-
-//    public void setRecentSearches(ArrayList<String> searches) {
-//        recentPanel.removeAll();
-//        if (searches.isEmpty()) {
-//            setPanelPlaceholder(recentPanel, "No recent searches.");
-//        } else {
-//            for (String search : searches) {
-//                JLabel searchLabel = new JLabel(search);
-//                recentPanel.add(searchLabel);
-//            }
-//        }
-//        recentPanel.revalidate();
-//        recentPanel.repaint();
-//    }
-
     private JLabel createInfoLabel() throws IOException, FontFormatException {
         infoLabel = new JLabel("Route Info");
         infoLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
@@ -451,14 +451,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         return savedLabel;
     }
-
-//    private JLabel createRecentLabel() throws IOException, FontFormatException {
-//        recentLabel = new JLabel("Recent Searches");
-//        recentLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
-//        recentLabel.setForeground(themeManager.getForegroundColor());
-//        recentLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-//        return recentLabel;
-//    }
 
     private JPanel createRouteContainer() {
         JPanel mainContainer = new JPanel();
