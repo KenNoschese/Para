@@ -18,6 +18,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import static org.example.gui.resources.fonts.loadCustomFont;
 
@@ -362,6 +363,134 @@ public class factoryPanel {
         };
 
         return routePanel;
+    }
+
+    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, java.util.function.Consumer<RouteData> onClick) {
+        ThemeManager themeManager = ThemeManager.getInstance();
+
+        RoundingOfPanels transferPanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge()) {
+            private Color defaultColor = themeManager.getPanelColor();
+
+            {
+                int rowHeight = 25;
+                int padding = 40;
+                int totalHeight = padding + (transferRoute.size() * rowHeight) + 40;
+
+                setLayout(null);
+                setPreferredSize(new Dimension(Integer.MAX_VALUE, totalHeight));
+                setMaximumSize(new Dimension(Integer.MAX_VALUE, totalHeight));
+                setBackground(defaultColor);
+                setForeground(themeManager.getForegroundColor());
+                putClientProperty("themeColor", "panel");
+
+                setupHoverEffect();
+
+                themeManager.addThemeChangeListener(isDarkMode -> {
+                    defaultColor = themeManager.getPanelColor();
+                    setBackground(defaultColor);
+                    repaint();
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                try {
+                    Font titleFont = fonts.loadCustomFont(fonts.DM_SANS_BOLD, sizeManager.getInstance().getTextSmall() + 1);
+                    Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, sizeManager.getInstance().getTextSmall());
+                    drawTransferContent(g2d, titleFont, dataFont);
+                } catch (Exception e) {
+                    Font dataFont = new Font("Arial", Font.PLAIN, 12);
+                    drawTransferContent(g2d, dataFont, dataFont);
+                }
+
+                g2d.dispose();
+            }
+
+            private void drawTransferContent(Graphics2D g2d, Font titleFont, Font dataFont) {
+                int[] columnWidths = {300, 150, 150, 200, 100, 100};
+                int[] columnX = new int[columnWidths.length];
+                columnX[0] = 20;
+                for (int i = 1; i < columnWidths.length; i++) {
+                    columnX[i] = columnX[i - 1] + columnWidths[i - 1];
+                }
+
+                int yStart = 30;
+                int rowHeight = 25;
+                int y = yStart;
+
+                g2d.setFont(titleFont);
+                g2d.setColor(themeManager.getBlack());
+                g2d.drawString("Transfer Route (" + transferRoute.size() + " segments)", columnX[0], y);
+
+                y += 10;
+                g2d.setColor(themeManager.getBlack().darker());
+                g2d.drawLine(columnX[0], y, columnX[columnX.length - 1] + 100, y);
+                y += 20;
+
+                g2d.setFont(dataFont);
+                g2d.setColor(themeManager.getBlack());
+
+                double totalFare = 0;
+                double totalDistance = 0;
+
+                for (int i = 0; i < transferRoute.size(); i++) {
+                    RouteData seg = transferRoute.get(i);
+                    int textY = y + g2d.getFontMetrics().getAscent();
+
+                    g2d.drawString(seg.getRoute(), columnX[0], textY);
+                    g2d.drawString(String.valueOf(seg.getTransfers()), columnX[1], textY);
+                    g2d.drawString(String.valueOf(seg.getstops()), columnX[2], textY);
+                    g2d.drawString(seg.getDetails(), columnX[3], textY);
+                    g2d.drawString(String.format("₱%.2f", seg.getFare()), columnX[4], textY);
+                    g2d.drawString(String.valueOf(seg.getETA()), columnX[5], textY);
+
+                    totalFare += seg.getFare();
+                    totalDistance += seg.getDistance();
+
+                    y += rowHeight;
+                }
+
+                y += 10;
+                g2d.setFont(titleFont);
+                g2d.setColor(themeManager.getYellow().darker());
+                g2d.drawString(
+                        String.format("Total: ₱%.2f | %.0f km total", totalFare, totalDistance),
+                        columnX[0],
+                        y + 20
+                );
+            }
+
+            private void setupHoverEffect() {
+                Color hoverColor = themeManager.getYellow().brighter();
+
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        setBackground(hoverColor);
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (onClick != null && !transferRoute.isEmpty()) {
+                            onClick.accept(transferRoute.get(0)); // or show detailed popup
+                        }
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        setBackground(defaultColor);
+                        repaint();
+                    }
+                });
+            }
+        };
+
+        return transferPanel;
     }
 
     /**

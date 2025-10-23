@@ -381,7 +381,7 @@ public class RouteManager {
             System.err.println("[ERROR] Failed to query routes: " + e.getMessage());
             e.printStackTrace();
         } finally {
-            // Ensure connection is closed
+
             if (routeManager != null) {
                 try {
                     routeManager.close();

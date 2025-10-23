@@ -659,15 +659,15 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedPanel.revalidate();
         savedPanel.repaint();
     }
-
-    private JLabel createInfoLabel() throws IOException, FontFormatException {
-        infoLabel = new JLabel("Route Info");
-        infoLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
-        infoLabel.setForeground(themeManager.getForegroundColor());
-        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        return infoLabel;
-    }
+//
+//    private JLabel createInfoLabel() throws IOException, FontFormatException {
+//        infoLabel = new JLabel("Route Info");
+//        infoLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14f));
+//        infoLabel.setForeground(themeManager.getForegroundColor());
+//        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+//
+//        return infoLabel;
+//    }
 
     private JLabel createSavedLabel() throws IOException, FontFormatException {
         savedLabel = new JLabel("Saved Routes");
@@ -691,7 +691,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         mainContainer.setBackground(themeManager.getBackgroundColor());
         mainContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Create a wrapper with BorderLayout
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(themeManager.getBackgroundColor());
         wrapper.setPreferredSize(new Dimension(Integer.MAX_VALUE, 500));
@@ -704,7 +703,6 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         routeContainer.add(factoryPanel.createRouteHeader());
         routeContainer.add(Box.createVerticalStrut(10));
 
-        // Add routeContainer to the top of the wrapper
         wrapper.add(routeContainer, BorderLayout.NORTH);
 
         mainContainer.add(Box.createVerticalStrut(5));
@@ -727,7 +725,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
             }
             RouteManager routeManager = new RouteManager();
             ArrayList<RouteData> foundRoutes = routeManager.findRoutes(from, to, "Student");
-            displayRoutes(foundRoutes, from, to);
+            ArrayList<ArrayList<RouteData>> allRoutes = routeManager.findRoutesWithTransfers(from, to, "Student");
+            displayRoutes(foundRoutes, allRoutes, from, to);
         } catch (IOException | FontFormatException ex) {
             JOptionPane.showMessageDialog(this,
                     "Error searching routes: " + ex.getMessage(),
@@ -738,14 +737,14 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         }
     }
 
-    private void displayRoutes(ArrayList<RouteData> routes, String from, String to)
-            throws IOException, FontFormatException {
+    private void displayRoutes(ArrayList<RouteData> routes, ArrayList<ArrayList<RouteData>> allRoutes,
+                               String from, String to) throws IOException, FontFormatException {
         routeContainer.removeAll();
         routeContainer.add(factoryPanel.createRouteHeader());
         routeContainer.add(Box.createVerticalStrut(10));
         routeContainer.setBackground(themeManager.getBackgroundColor());
 
-        if (routes.isEmpty()) {
+        if (allRoutes.isEmpty() && routes.isEmpty()) {
             JLabel noRoutesLabel = new JLabel("No routes found from " + from + " to " + to);
             noRoutesLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
             noRoutesLabel.setForeground(themeManager.getGray());
@@ -754,13 +753,23 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
             routeContainer.add(Box.createVerticalStrut(50));
             routeContainer.add(noRoutesLabel);
             routeContainer.add(Box.createVerticalStrut(50));
-        } else {
+        } else if (!routes.isEmpty()){
             for (int i = 0; i < routes.size(); i++) {
                 JPanel panel = factoryPanel.createRoutePanel(routes.get(i), this::displayRouteInfo);
                 panel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 routeContainer.add(panel);
 
                 if (i < routes.size() - 1) {
+                    routeContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
+                }
+            }
+        } else {
+            for (int i = 0; i < allRoutes.size(); i++) {
+                ArrayList<RouteData> transferRoute = allRoutes.get(i);
+                JPanel panel = factoryPanel.createTransferRoutePanel(transferRoute, this::displayRouteInfo);
+                panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                routeContainer.add(panel);
+                if (i < allRoutes.size() - 1) {
                     routeContainer.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
                 }
             }
