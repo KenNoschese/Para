@@ -47,6 +47,67 @@ public class factoryPanel {
      *  Header Panel
      * ==========================
      */
+    public static RoundingOfButtons createUserButton() throws IOException, FontFormatException {
+        RoundingOfButtons userButton;
+        ThemeManager themeManager = ThemeManager.getInstance();
+        String username = "Guest";
+        String category = "N/A";
+
+        try {
+            org.example.DatabaseManager.DatabaseInstance db = org.example.DatabaseManager.DatabaseInstance.getInstance();
+            username = db.getActiveUsername();
+            String pswd = db.getActivePassword();
+            System.out.println("Active user: " + username + ", pass: " + pswd);
+
+            if (pswd != null && !pswd.isEmpty()) {
+                char firstDigit = pswd.charAt(0);
+                if (firstDigit == '1') category = "Regular";
+                else if (firstDigit == '2') category = "Student";
+                else if (firstDigit == '3') category = "PWD";
+                else if (firstDigit == '4') category = "Senior Citizen";
+            }
+        } catch (Exception ignored) {}
+
+        userButton = new RoundingOfButtons(username + "  (" + category + ")");
+        userButton.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
+        userButton.setFocusPainted(false);
+        userButton.setBorderPainted(false);
+        userButton.setBackground(new Color(255, 255, 255, 180));
+        userButton.setForeground(themeManager.getBlack());
+        userButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        userButton.setBounds(15, 10, 220, 30);
+        userButton.setHorizontalAlignment(SwingConstants.LEFT);
+
+        userButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                userButton.setBackground(themeManager.getYellow());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                userButton.setBackground(new Color(255, 255, 255, 180));
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                JPopupMenu menu = new JPopupMenu();
+                JMenuItem profileItem = new JMenuItem("Profile");
+                JMenuItem logoutItem = new JMenuItem("Logout");
+                logoutItem.addActionListener(evt -> {
+
+                    org.example.DatabaseManager.DatabaseInstance.getInstance().close();
+                    System.exit(0);
+                });
+                menu.add(profileItem);
+                menu.add(logoutItem);
+                menu.show(userButton, 0, userButton.getHeight());
+            }
+        });
+
+        return userButton;
+    }
+
     public static JPanel createHeaderPanel() throws IOException {
         ThemeManager themeManager = ThemeManager.getInstance();
         AnimationConfig config = new AnimationConfig();
@@ -85,15 +146,16 @@ public class factoryPanel {
                 });
                 add(logo);
 
-                add(new darkModeToggle() {{
-                    setBounds(getWidth() - 80, 20, 50, 30);
-                    addComponentListener(new java.awt.event.ComponentAdapter() {
-                        @Override
-                        public void componentResized(java.awt.event.ComponentEvent e) {
-                            setBounds(getWidth() - 80, 20, 50, 30);
-                        }
-                    });
-                }});
+                darkModeToggle toggle = new darkModeToggle();
+                toggle.setBounds(getWidth() - 80, 20, 50, 30);
+                add(toggle);
+
+                addComponentListener(new java.awt.event.ComponentAdapter() {
+                    @Override
+                    public void componentResized(java.awt.event.ComponentEvent e) {
+                        toggle.setBounds(getWidth() - 80, 20, 50, 30);
+                    }
+                });
 
                 Images images = Images.getInstance();
                 ImageIcon cityIcon = images.getCityIcon();
@@ -253,7 +315,7 @@ public class factoryPanel {
             }
 
             private void drawTableContent(Graphics2D g2d, Font dataFont) {
-                int[] columnWidths = {300, 150, 150, 300, 100, 100};
+                int[] columnWidths = {300, 150, 150, 200, 100, 100};
                 int[] columnX = new int[6];
                 columnX[0] = 10;
                 for (int i = 1; i < 6; i++) {
@@ -346,7 +408,7 @@ public class factoryPanel {
             }
 
             private void drawHeader(Graphics2D g2d, Font font) {
-                int[] columnWidths = {300, 150, 150, 300, 100, 100};
+                int[] columnWidths = {300, 150, 150, 200, 100, 100};
                 int[] columnX = new int[columnWidths.length];
 
                 columnX[0] = 10;

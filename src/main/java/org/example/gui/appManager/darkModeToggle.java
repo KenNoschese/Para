@@ -1,39 +1,39 @@
 package org.example.gui.appManager;
 
+import org.example.gui.components.RoundingOfButtons;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class darkModeToggle extends JPanel {
-    private final JToggleButton togButt;
+    private final RoundingOfButtons togButt;
 
     public darkModeToggle() {
-        setLayout(new FlowLayout(FlowLayout.RIGHT));
         setOpaque(false);
+        setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
-        togButt = new JToggleButton();
-        togButt.setOpaque(false);
+        togButt = new RoundingOfButtons("☾");
+        togButt.setArc(20, 20);
+        togButt.setPreferredSize(new Dimension(30, 30));
+        togButt.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+        togButt.setFocusable(false);
+        togButt.setBorder(BorderFactory.createEmptyBorder());
+
+        updateButtonAppearance();
+
         togButt.addActionListener(e -> {
             ThemeManager.getInstance().toggleDark();
             updateButtonAppearance();
         });
 
         add(togButt);
-        togButt.setPreferredSize(new Dimension(30,30));
-
-        togButt.setBorder(BorderFactory.createEmptyBorder());
-        updateButtonAppearance();
     }
-
-
 
     private void updateButtonAppearance() {
         boolean isDarkMode = ThemeManager.getInstance().isDarkMode();
-        togButt.setText(isDarkMode ? "\u2600" : "\uD83C\uDF19");
-        togButt.setFocusable(false);
 
-        togButt.setBackground(ThemeManager.getInstance().getBlack());
-        togButt.setFont(new Font("Noto Color Emoji", Font.PLAIN, 16));
+        togButt.setText(isDarkMode ? "☀" : "☾");
+        togButt.setForeground(isDarkMode ? ThemeManager.getInstance().getWhite(): ThemeManager.getInstance().getBlack());
+        togButt.setBackground(isDarkMode ? ThemeManager.getInstance().getBlack() : ThemeManager.getInstance().getWhite()); // yellow or navy
     }
-
-
 }
