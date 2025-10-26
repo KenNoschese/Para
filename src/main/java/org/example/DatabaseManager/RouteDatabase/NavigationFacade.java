@@ -12,22 +12,16 @@ import java.util.Optional;
 public class NavigationFacade {
 
     private final RouteManager routeManager;
-    private RouteStrategy routeStrategy; // 🧠 Strategy Pattern field
+    private RouteStrategy routeStrategy;
 
     public NavigationFacade() throws SQLException {
         this.routeManager = new RouteManager();
     }
 
-    /**
-     * Allows changing the route-finding strategy at runtime.
-     */
     public void setRouteStrategy(RouteStrategy routeStrategy) {
         this.routeStrategy = routeStrategy;
     }
 
-    /**
-     * Finds the best route based on the user's selected strategy (distance, time, transfers, fare, etc.)
-     */
     public RouteData findBestRoute(String from, String to, String category, String priority) throws SQLException {
         ArrayList<RouteData> possibleRoutes = routeManager.findRoutes(from, to, category);
 
@@ -40,7 +34,7 @@ public class NavigationFacade {
             case "distance" -> setRouteStrategy(new ShortestDistanceStrategy());
             case "eta", "time" -> setRouteStrategy(new ShortestTimeStrategy());
             case "transfers", "stops" -> setRouteStrategy(new LeastTransferStrategy());
-            default -> setRouteStrategy(new ShortestDistanceStrategy()); // default to distance
+            default -> setRouteStrategy(new ShortestDistanceStrategy());
         }
 
         Optional<RouteData> bestRoute = routeStrategy.findBestRoute(possibleRoutes);

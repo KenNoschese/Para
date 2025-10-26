@@ -276,291 +276,160 @@ public class factoryPanel {
      *  Route Panel
      * ==========================
      */
-    public static JPanel createRoutePanel(RouteData routeData, java.util.function.Consumer<RouteData> onClick) {
+    public static JPanel createRoutePanel(RouteData routeData, java.util.function.Consumer<RouteData> onClick) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
+        Color defaultColor = themeManager.getPanelColor();
 
-        RoundingOfPanels routePanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge()) {
-            private Color defaultColor = themeManager.getPanelColor();
+        RoundingOfPanels routePanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
+        routePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        routePanel.setBackground(defaultColor);
+        routePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        routePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        routePanel.setOpaque(true);
 
-            {
-                this.setPreferredSize(new Dimension(Integer.MAX_VALUE, 60));
-                this.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-                setBackground(defaultColor);
-                setForeground(themeManager.getForegroundColor());
-                setLayout(null);
-                putClientProperty("themeColor", "panel");
+        JLabel routeTitle = new JLabel(routeData.getRoute());
+        routeTitle.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 16));
+        routeTitle.setForeground(themeManager.getBlack());
+        routePanel.add(routeTitle);
+        routePanel.add(Box.createHorizontalStrut(30));
 
-                setupHoverEffect();
-                themeManager.addThemeChangeListener(isDarkMode -> {
-                    defaultColor = themeManager.getPanelColor();
-                    setBackground(defaultColor);
-                    repaint();
-                });
+        JLabel detailsLabel = new JLabel(String.format(
+                "<html><b>Details:</b> %s</html>", routeData.getDetails()
+        ));
+        detailsLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14));
+        detailsLabel.setForeground(themeManager.getBlack());
+        routePanel.add(detailsLabel);
+
+        JLabel infoLabel = new JLabel(String.format(
+                "<html><b>Transfers:</b> %d <b>| Stops: </b>%d <b>| ETA:</b> %s</html>",
+                routeData.getTransfers(),
+                routeData.getStops(),
+                routeData.getEta()
+        ));
+        infoLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 13));
+        infoLabel.setForeground(themeManager.getForegroundColor());
+        routePanel.add(infoLabel);
+        routePanel.add(Box.createHorizontalStrut(30));
+
+        JLabel fareLabel = new JLabel(String.format("Php %.2f", routeData.getFare()));
+        fareLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 14));
+        fareLabel.setForeground(themeManager.getBlack());
+        routePanel.add(fareLabel);
+
+        routePanel.add(Box.createVerticalStrut(8));
+
+        Color hoverColor = themeManager.getYellow().brighter();
+
+        routePanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                routePanel.setBackground(hoverColor);
+                routePanel.repaint();
             }
 
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            public void mouseExited(MouseEvent e) {
+                routePanel.setBackground(defaultColor);
+                routePanel.repaint();
+            }
 
-                try {
-                    Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, sizeManager.getInstance().getTextSmall());
-                    drawTableContent(g2d, dataFont);
-                } catch (Exception e) {
-                    Font dataFont = new Font("Arial", Font.PLAIN, 12);
-                    drawTableContent(g2d, dataFont);
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (onClick != null) {
+                    onClick.accept(routeData);
                 }
-
-                g2d.dispose();
             }
+        });
 
-            private void drawTableContent(Graphics2D g2d, Font dataFont) {
-                int[] columnWidths = {300, 150, 150, 200, 100, 100};
-                int[] columnX = new int[6];
-                columnX[0] = 10;
-                for (int i = 1; i < 6; i++) {
-                    columnX[i] = columnX[i - 1] + columnWidths[i - 1];
-                }
-
-                g2d.setFont(dataFont);
-                g2d.setColor(themeManager.getBlack());
-
-                int yPos = (getHeight() + g2d.getFontMetrics().getAscent()) / 2;
-
-                g2d.drawString(routeData.getRoute(), columnX[0], yPos);
-                g2d.drawString(String.valueOf(routeData.getTransfers()), columnX[1], yPos);
-                g2d.drawString(String.valueOf(routeData.getstops()), columnX[2], yPos);
-                g2d.drawString(routeData.getDetails(), columnX[3], yPos);
-                g2d.drawString(String.format("Php%.2f", routeData.getFare()), columnX[4], yPos);
-                g2d.drawString(String.valueOf(routeData.getETA()), columnX[5], yPos);
-            }
-
-            private void setupHoverEffect() {
-                Color hoverColor = themeManager.getYellow().brighter();
-
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        setBackground(hoverColor);
-                        repaint();
-                    }
-
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        if (onClick != null) {
-                            onClick.accept(routeData);
-                        }
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        setBackground(defaultColor);
-                        repaint();
-                    }
-                });
-            }
-        };
+        themeManager.addThemeChangeListener(isDarkMode -> {
+            routePanel.setBackground(themeManager.getPanelColor());
+            routeTitle.setForeground(themeManager.getBlack());
+            detailsLabel.setForeground(themeManager.getYellow());
+            infoLabel.setForeground(themeManager.getForegroundColor());
+            fareLabel.setForeground(themeManager.getYellow());
+            routePanel.repaint();
+        });
 
         return routePanel;
     }
 
-    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, java.util.function.Consumer<RouteData> onClick) {
+    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, java.util.function.Consumer<ArrayList<RouteData>> onClick) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
+        Color defaultColor = themeManager.getPanelColor();
 
-        RoundingOfPanels transferPanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge()) {
-            private Color defaultColor = themeManager.getPanelColor();
+        RoundingOfPanels panel = new RoundingOfPanels(30);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(defaultColor);
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
+        panel.setOpaque(true);
 
-            {
-                int rowHeight = 25;
-                int padding = 40;
-                int totalHeight = padding + (transferRoute.size() * rowHeight) + 40;
+        JLabel title = new JLabel("Transfer Route (" + transferRoute.size() + " segments)");
+        title.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16));
+        title.setForeground(themeManager.getBlack());
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(10));
 
-                setLayout(null);
-                setPreferredSize(new Dimension(Integer.MAX_VALUE, totalHeight));
-                setMaximumSize(new Dimension(Integer.MAX_VALUE, totalHeight));
-                setBackground(defaultColor);
-                setForeground(themeManager.getForegroundColor());
-                putClientProperty("themeColor", "panel");
+        double totalFare = 0;
+        int totalDistance = 0;
 
-                setupHoverEffect();
+        for (int i = 0; i < transferRoute.size(); i++) {
+            RouteData seg = transferRoute.get(i);
 
-                themeManager.addThemeChangeListener(isDarkMode -> {
-                    defaultColor = themeManager.getPanelColor();
-                    setBackground(defaultColor);
-                    repaint();
-                });
+            JLabel segLabel = new JLabel(String.format(
+                    "Segment %d: %s — Php %.2f, %d km (%s → %s)",
+                    i + 1,
+                    seg.getRoute(),
+                    seg.getFare(),
+                    seg.getDistance(),
+                    seg.getFromLocation(),
+                    seg.getDestination()
+            ));
+            segLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
+            segLabel.setForeground(themeManager.getBlack());
+            panel.add(segLabel);
+
+            totalFare += seg.getFare();
+            totalDistance += seg.getDistance();
+        }
+
+        panel.add(Box.createVerticalStrut(10));
+
+        JLabel totalLabel = new JLabel(String.format(
+                "Total Fare: Php %.2f | Total Distance: %d km",
+                totalFare, totalDistance
+        ));
+        totalLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
+        totalLabel.setForeground(themeManager.getForegroundColor());
+        panel.add(totalLabel);
+
+        Color hoverColor = themeManager.getYellow().brighter();
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                panel.setBackground(hoverColor);
+                panel.repaint();
             }
 
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                try {
-                    Font titleFont = fonts.loadCustomFont(fonts.DM_SANS_BOLD, sizeManager.getInstance().getTextSmall() + 1);
-                    Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_REGULAR, sizeManager.getInstance().getTextSmall());
-                    drawTransferContent(g2d, titleFont, dataFont);
-                } catch (Exception e) {
-                    Font dataFont = new Font("Arial", Font.PLAIN, 12);
-                    drawTransferContent(g2d, dataFont, dataFont);
-                }
-
-                g2d.dispose();
-            }
-
-            private void drawTransferContent(Graphics2D g2d, Font titleFont, Font dataFont) {
-                int[] columnWidths = {300, 150, 150, 200, 100, 100};
-                int[] columnX = new int[columnWidths.length];
-                columnX[0] = 20;
-                for (int i = 1; i < columnWidths.length; i++) {
-                    columnX[i] = columnX[i - 1] + columnWidths[i - 1];
-                }
-
-                int yStart = 30;
-                int rowHeight = 25;
-                int y = yStart;
-
-                g2d.setFont(titleFont);
-                g2d.setColor(themeManager.getBlack());
-                g2d.drawString("Transfer Route (" + transferRoute.size() + " segments)", columnX[0], y);
-
-                y += 10;
-                g2d.setColor(themeManager.getBlack().darker());
-                g2d.drawLine(columnX[0], y, columnX[columnX.length - 1] + 100, y);
-                y += 20;
-
-                g2d.setFont(dataFont);
-                g2d.setColor(themeManager.getBlack());
-
-                double totalFare = 0;
-                double totalDistance = 0;
-
-                for (int i = 0; i < transferRoute.size(); i++) {
-                    RouteData seg = transferRoute.get(i);
-                    int textY = y + g2d.getFontMetrics().getAscent();
-
-                    g2d.drawString(seg.getRoute(), columnX[0], textY);
-                    g2d.drawString(String.valueOf(seg.getTransfers()), columnX[1], textY);
-                    g2d.drawString(String.valueOf(seg.getstops()), columnX[2], textY);
-                    g2d.drawString(seg.getDetails(), columnX[3], textY);
-                    g2d.drawString(String.format("₱%.2f", seg.getFare()), columnX[4], textY);
-                    g2d.drawString(String.valueOf(seg.getETA()), columnX[5], textY);
-
-                    totalFare += seg.getFare();
-                    totalDistance += seg.getDistance();
-
-                    y += rowHeight;
-                }
-
-                y += 10;
-                g2d.setFont(titleFont);
-                g2d.setColor(themeManager.getYellow().darker());
-                g2d.drawString(
-                        String.format("Total: ₱%.2f | %.0f km total", totalFare, totalDistance),
-                        columnX[0],
-                        y + 20
-                );
-            }
-
-            private void setupHoverEffect() {
-                Color hoverColor = themeManager.getYellow().brighter();
-
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        setBackground(hoverColor);
-                        repaint();
-                    }
-
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        if (onClick != null && !transferRoute.isEmpty()) {
-                            onClick.accept(transferRoute.get(0)); // or show detailed popup
-                        }
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        setBackground(defaultColor);
-                        repaint();
-                    }
-                });
-            }
-        };
-
-        return transferPanel;
-    }
-
-    /**
-     * ==========================
-     *  Route Header
-     * ==========================
-     */
-    public static JPanel createRouteHeader() {
-        ThemeManager themeManager = ThemeManager.getInstance();
-
-        RoundingOfPanels routeHeader = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusSmall()) {
-            {
-                setPreferredSize(new Dimension(Integer.MAX_VALUE, 60));
-                setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-                setBackground(themeManager.getBackgroundColor());
-                setForeground(themeManager.getForegroundColor());
-                setLayout(null);
-                setBorder(new LineBorder(themeManager.getForegroundColor(), 2));
-                putClientProperty("themeColor", "panel");
-
-                themeManager.addThemeChangeListener(isDarkMode -> {
-                    setBackground(themeManager.getBackgroundColor());
-                    setForeground(themeManager.getForegroundColor());
-                    setBorder(new LineBorder(themeManager.getForegroundColor(), 2));
-                    repaint();
-                });
+            public void mouseExited(MouseEvent e) {
+                panel.setBackground(defaultColor);
+                panel.repaint();
             }
 
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                try {
-                    Font dataFont = fonts.loadCustomFont(fonts.DM_SANS_BOLD, sizeManager.getInstance().getTextMedium());
-                    drawHeader(g2d, dataFont);
-                } catch (Exception e) {
-                    Font dataFont = new Font("Arial", Font.BOLD, 12);
-                    drawHeader(g2d, dataFont);
+            public void mouseClicked(MouseEvent e) {
+                if (onClick != null && !transferRoute.isEmpty()) {
+                    onClick.accept(transferRoute);
                 }
-
-                g2d.dispose();
             }
+        });
 
-            private void drawHeader(Graphics2D g2d, Font font) {
-                int[] columnWidths = {300, 150, 150, 200, 100, 100};
-                int[] columnX = new int[columnWidths.length];
-
-                columnX[0] = 10;
-                for (int i = 1; i < columnWidths.length; i++) {
-                    columnX[i] = columnX[i - 1] + columnWidths[i - 1];
-                }
-
-                g2d.setFont(font);
-                g2d.setColor(themeManager.getForegroundColor());
-
-                int yPos = (getHeight() + g2d.getFontMetrics().getAscent()) / 2 - 4;
-
-                g2d.drawString("Route", columnX[0], yPos);
-                g2d.drawString("Transfers", columnX[1], yPos);
-                g2d.drawString("Stops", columnX[2], yPos);
-                g2d.drawString("Details", columnX[3], yPos);
-                g2d.drawString("Fare", columnX[4], yPos);
-                g2d.drawString("ETA", columnX[5], yPos);
-            }
-        };
-
-        return routeHeader;
+        return panel;
     }
+
     public static RoundingOfPanels createStepPanel(
             int stepNumber,
             String[] textLines,

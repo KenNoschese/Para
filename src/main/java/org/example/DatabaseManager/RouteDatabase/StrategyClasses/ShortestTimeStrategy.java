@@ -5,13 +5,17 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Optional;
 
-/**
- * Strategy to find route with the shortest estimated time (ETA).
- */
 public class ShortestTimeStrategy implements RouteStrategy {
     @Override
     public Optional<RouteData> findBestRoute(ArrayList<RouteData> routes) {
-        return routes.stream().min(Comparator.comparingInt(RouteData::getETA));
+        return routes.stream().min(Comparator.comparingInt(RouteData::getEta));
+    }
+
+    @Override
+    public Optional<ArrayList<RouteData>> findBestTransferRoute(ArrayList<ArrayList<RouteData>> transferRoutes) {
+        return transferRoutes.stream()
+                .min(Comparator.comparingDouble(routeList ->
+                        routeList.stream().mapToDouble(RouteData::getEta).sum()));
     }
 }
 

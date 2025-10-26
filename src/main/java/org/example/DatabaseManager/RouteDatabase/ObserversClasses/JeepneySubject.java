@@ -5,9 +5,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Subject class — manages jeepney data and notifies observers when changes occur.
- */
 public class JeepneySubject {
     private final List<JeepneyObserver> observers = new ArrayList<>();
     private final Connection con;
@@ -57,9 +54,6 @@ public class JeepneySubject {
         notifyChange(plateNumber);
     }
 
-    /**
-     * Fetch current jeepney data and notify observers.
-     */
     private void notifyChange(String plateNumber) throws SQLException {
         String query = "SELECT current_passengers, capacity FROM Jeepneys WHERE plate_number = ?";
         try (PreparedStatement pst = con.prepareStatement(query)) {
@@ -74,9 +68,6 @@ public class JeepneySubject {
         }
     }
 
-    /**
-     * Show all jeepneys for debug/observer polling simulation.
-     */
     public void showAllJeepneys() throws SQLException {
         String query = "SELECT plate_number, route_id, current_passengers, capacity FROM Jeepneys";
         try (PreparedStatement pst = con.prepareStatement(query);

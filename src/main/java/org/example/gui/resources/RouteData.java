@@ -3,9 +3,9 @@ package org.example.gui.resources;
 import java.util.ArrayList;
 
 public class RouteData {
-    private ArrayList<String> route_stops = new ArrayList<>();
+    private ArrayList<String> routeStops = new ArrayList<>();
     private String fromLocation, destination, route, details = "Fastest";
-    private int transfers, ETA, distance, stops;
+    private int transfers, eta, distance, stops;
     private double fare;
 
     public String getFromLocation() {
@@ -24,20 +24,20 @@ public class RouteData {
         return details;
     }
 
-    public ArrayList<String> getRoute_stops() {
-        return route_stops;
+    public ArrayList<String> getRouteStops() {
+        return routeStops;
     }
 
     public int getTransfers() {
         return transfers;
     }
 
-    public int getstops() {
+    public int getStops() {
         return stops;
     }
 
-    public int getETA() {
-        return ETA;
+    public int getEta() {
+        return eta;
     }
 
     public int getDistance() {
@@ -48,8 +48,8 @@ public class RouteData {
         return fare;
     }
 
-    public void setRoute_stops(ArrayList<String> route_stops) {
-        this.route_stops = route_stops;
+    public void setRouteStops(ArrayList<String> routeStops) {
+        this.routeStops = routeStops;
     }
 
     public void setFromLocation(String fromLocation) {
@@ -76,8 +76,8 @@ public class RouteData {
         this.stops = stops;
     }
 
-    public void setETA(int ETA) {
-        this.ETA = ETA;
+    public void setEta(int eta) {
+        this.eta = eta;
     }
 
     public void setDistance(int distance) {
@@ -88,46 +88,18 @@ public class RouteData {
         this.fare = fare;
     }
 
-    public int getStops() {
-        return getstops();
-    }
-
-    public ArrayList<String> getRouteStops() {
-        return getRoute_stops();
-    }
-
-    public void setRouteStops(ArrayList<String> stops) {
-        setRoute_stops(stops);
-    }
-
-    public int getEta() {
-        return getETA();
-    }
-
-    public void setEta(int eta) {
-        setETA(eta);
-    }
-
-    public void setDistanceKm(int distanceKm) {
-        setDistance(distanceKm);
-    }
-
-    public int getDistanceKm() {
-        return getDistance();
-    }
-
     @Override
     public String toString() {
         return "RouteData{" +
                 "route='" + route + '\'' +
                 ", fromLocation='" + fromLocation + '\'' +
                 ", destination='" + destination + '\'' +
-                ", ETA=" + ETA +
+                ", eta=" + eta +
                 ", stops=" + stops +
                 ", distance=" + distance +
                 ", fare=" + fare +
                 ", details='" + details + '\'' +
-                ", route_stops=" + route_stops +
+                ", routeStops=" + routeStops +
                 '}';
     }
 }

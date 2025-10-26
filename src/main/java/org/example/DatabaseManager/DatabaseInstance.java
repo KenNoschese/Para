@@ -40,7 +40,7 @@ public class DatabaseInstance {
 
     public static synchronized DatabaseInstance getInstance() {
         if (instance == null) {
-            instance = new DatabaseInstance(); // default root
+            instance = new DatabaseInstance();
         }
         return instance;
     }

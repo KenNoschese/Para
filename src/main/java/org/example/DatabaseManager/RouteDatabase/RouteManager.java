@@ -120,11 +120,11 @@ public class RouteManager {
                     data.setFromLocation(from);
                     data.setDestination(to);
                     data.setStops(stops);
-                    data.setETA(eta);
+                    data.setEta(eta);
                     data.setDistance((int) distanceKm);
                     data.setFare(finalFare);
                     data.setDetails(category);
-                    data.setRoute_stops(stopNames);
+                    data.setRouteStops(stopNames);
 
                     routes.add(data);
                 }
@@ -276,7 +276,7 @@ public class RouteManager {
                     fromRoute.setDistance((int) fromDistanceKm);
                     fromRoute.setFare(fromFare);
                     fromRoute.setDetails(category);
-                    fromRoute.setRoute_stops(getAllStopsForRoute(fromRouteId, from, transferStop));
+                    fromRoute.setRouteStops(getAllStopsForRoute(fromRouteId, from, transferStop));
 
                     // Second segment: transfer_stop -> to
                     String toRouteName = rs.getString("to_route_name");
@@ -300,7 +300,7 @@ public class RouteManager {
                     toRoute.setDistance((int) toDistanceKm);
                     toRoute.setFare(toFare);
                     toRoute.setDetails(category);
-                    toRoute.setRoute_stops(getAllStopsForRoute(toRouteId, transferStop, to));
+                    toRoute.setRouteStops(getAllStopsForRoute(toRouteId, transferStop, to));
 
                     // Combine into a single route with transfer
                     ArrayList<RouteData> transferRoute = new ArrayList<>();
@@ -321,14 +321,13 @@ public class RouteManager {
             // Initialize RouteManager
             routeManager = new RouteManager();
 
-            String from = "bangkal";
-            String to = "gmall bajada";
+            String from = "puan";
+            String to = "mintal";
             String category = "Regular"; // No discount for simplicity
 
             System.out.println("=== Route Debug: Bangkal to GMall Bajada (Least Transfers) ===");
             System.out.println("Passenger Category: " + category);
 
-            // Find all routes (direct and with transfers)
             ArrayList<ArrayList<RouteData>> allRoutes = routeManager.findRoutesWithTransfers(from, to, category);
 
             if (allRoutes.isEmpty()) {
@@ -336,7 +335,6 @@ public class RouteManager {
                 return;
             }
 
-            // Select the route with the least transfers
             Optional<ArrayList<RouteData>> bestRoute = allRoutes.stream()
                     .min((r1, r2) -> Integer.compare(r1.size(), r2.size()));
 
@@ -354,7 +352,7 @@ public class RouteManager {
                 // Direct route
                 RouteData directRoute = route.get(0);
                 System.out.printf("  Direct Route: %s%n", directRoute.getRoute());
-                System.out.printf("  Stops: %s%n", String.join(" -> ", directRoute.getRoute_stops()));
+                System.out.printf("  Stops: %s%n", String.join(" -> ", directRoute.getRouteStops()));
                 System.out.printf("  Fare: ₱%.2f%n", directRoute.getFare());
                 System.out.printf("  Distance: %d km%n", directRoute.getDistance());
                 totalFare = directRoute.getFare();
@@ -366,7 +364,7 @@ public class RouteManager {
                     RouteData segment = route.get(i);
                     System.out.printf("    Segment %d: %s (from %s to %s)%n",
                             i + 1, segment.getRoute(), segment.getFromLocation(), segment.getDestination());
-                    System.out.printf("      Stops: %s%n", String.join(" -> ", segment.getRoute_stops()));
+                    System.out.printf("      Stops: %s%n", String.join(" -> ", segment.getRouteStops()));
                     System.out.printf("      Fare: ₱%.2f%n", segment.getFare());
                     System.out.printf("      Distance: %d km%n", segment.getDistance());
                     totalFare += segment.getFare();
