@@ -2,63 +2,22 @@ package org.example.gui.pages;
 
 import static org.example.gui.components.Factories.factoryPanel.createUserButton;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.FontFormatException;
-import java.awt.GraphicsEnvironment;
-import java.awt.Image;
-import java.awt.Panel;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Optional;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.sql.*;
+import java.util.*;
 import java.util.function.Consumer;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
-import org.example.DatabaseManager.RouteDatabase.NavigationFacade;
-import org.example.DatabaseManager.RouteDatabase.RouteManager;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.CheapestFareStrategy;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.LeastTransferStrategy;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.RouteStrategy;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestDistanceStrategy;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestTimeStrategy;
-import org.example.gui.appManager.ThemeManager;
-import org.example.gui.appManager.darkModeToggle;
-import org.example.gui.appManager.sizeManager;
-import org.example.gui.components.RoundingOfButtons;
-import org.example.gui.components.RoundingOfPanels;
-import org.example.gui.components.RoundingOfTextfields;
-import org.example.gui.components.Factories.buttonFactory;
-import org.example.gui.components.Factories.factoryPanel;
-import org.example.gui.components.Factories.labelFactory;
-import org.example.gui.components.Factories.panelFactory;
-import org.example.gui.components.Factories.radioFactory;
-import org.example.gui.components.Factories.textfieldFactory;
+import org.example.DatabaseManager.RouteDatabase.*;
+import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
+import org.example.gui.appManager.*;
+import org.example.gui.components.*;
+import org.example.gui.components.Factories.*;
 import org.example.gui.resources.Images;
-import org.example.gui.resources.RouteData;
+import org.example.DatabaseManager.RouteDatabase.RouteData;
 import org.example.gui.resources.fonts;
 
 public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener {
@@ -800,6 +759,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     500, 40,
                     30
                 );
+
                 routePanel.setLayout(new BorderLayout());
                 routePanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 

@@ -1,6 +1,6 @@
 package org.example.DatabaseManager.RouteDatabase.StrategyClasses;
 
-import org.example.gui.resources.RouteData;
+import org.example.DatabaseManager.RouteDatabase.RouteData;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Optional;

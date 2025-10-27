@@ -3,18 +3,14 @@ package org.example.DatabaseManager.RouteDatabase;
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneySubject;
-import org.example.gui.resources.RouteData;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Optional;
 
-/**
- * RouteManager serves as a high-level interface to:
- *  - Fetch routes between locations
- *  - Handle fare and ETA computation
- *  - Manage Jeepney observer updates for passenger boarding/leaving
- */
+
+//for fetching routes, fare & time computation and managing observer updates (boarding/leaving)
+
 public class RouteManager {
     private final Connection con;
     private final JeepneySubject jeepneySubject;
@@ -206,7 +202,7 @@ public class RouteManager {
     public ArrayList<ArrayList<RouteData>> findRoutesWithTransfers(String from, String to, String category) throws SQLException {
         ArrayList<ArrayList<RouteData>> allRoutes = new ArrayList<>();
 
-        // 1. Find direct routes
+        // find direct routes
         ArrayList<RouteData> directRoutes = findRoutes(from, to, category);
         allRoutes.addAll(directRoutes.stream().map(route -> {
             ArrayList<RouteData> singleRoute = new ArrayList<>();
@@ -214,7 +210,7 @@ public class RouteManager {
             return singleRoute;
         }).toList());
 
-        // 2. Find routes with one transfer
+        // find routes with one transfer
         String sql = """
             SELECT DISTINCT
                 r1.route_id AS from_route_id,
@@ -252,7 +248,7 @@ public class RouteManager {
 
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
-                    // First segment: from -> transfer_stop
+                    // first segment, from to transfer_stop
                     String fromRouteName = rs.getString("from_route_name");
                     String transferStop = rs.getString("transfer_stop");
                     int fromRouteId = rs.getInt("from_route_id");
@@ -278,7 +274,7 @@ public class RouteManager {
                     fromRoute.setDetails(category);
                     fromRoute.setRouteStops(getAllStopsForRoute(fromRouteId, from, transferStop));
 
-                    // Second segment: transfer_stop -> to
+                    //second segment transfer_stop to destination
                     String toRouteName = rs.getString("to_route_name");
                     int toRouteId = rs.getInt("to_route_id");
                     double toDistanceKm = Math.abs(rs.getDouble("to_order") - rs.getDouble("transfer_to_order"));
@@ -302,7 +298,7 @@ public class RouteManager {
                     toRoute.setDetails(category);
                     toRoute.setRouteStops(getAllStopsForRoute(toRouteId, transferStop, to));
 
-                    // Combine into a single route with transfer
+                    //combine into a single route with transfer
                     ArrayList<RouteData> transferRoute = new ArrayList<>();
                     transferRoute.add(fromRoute);
                     transferRoute.add(toRoute);
@@ -314,16 +310,15 @@ public class RouteManager {
         return allRoutes;
     }
 
-    // Updated main method to print only the route with the least transfers. DEBUG ONLY.
+    //main method for testing purposes
     public static void main(String[] args) {
         RouteManager routeManager = null;
         try {
-            // Initialize RouteManager
             routeManager = new RouteManager();
 
             String from = "puan";
             String to = "mintal";
-            String category = "Regular"; // No discount for simplicity
+            String category = "Regular";
 
             System.out.println("=== Route Debug: Bangkal to GMall Bajada (Least Transfers) ===");
             System.out.println("Passenger Category: " + category);
@@ -349,7 +344,6 @@ public class RouteManager {
             double totalDistance = 0.0;
 
             if (route.size() == 1) {
-                // Direct route
                 RouteData directRoute = route.get(0);
                 System.out.printf("  Direct Route: %s%n", directRoute.getRoute());
                 System.out.printf("  Stops: %s%n", String.join(" -> ", directRoute.getRouteStops()));
@@ -358,7 +352,6 @@ public class RouteManager {
                 totalFare = directRoute.getFare();
                 totalDistance = directRoute.getDistance();
             } else {
-                // Transfer route
                 System.out.println("  Transfer Route:");
                 for (int i = 0; i < route.size(); i++) {
                     RouteData segment = route.get(i);

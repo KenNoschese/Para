@@ -13,26 +13,20 @@ public class JeepneySubject {
         this.con = DatabaseInstance.getInstance().getConnection();
     }
 
-    // Register a new observer
     public void registerObserver(JeepneyObserver observer) {
         observers.add(observer);
     }
 
-    // Remove an observer
     public void removeObserver(JeepneyObserver observer) {
         observers.remove(observer);
     }
 
-    // Notify all observers (simulated database change notification)
     private void notifyObservers(String plateNumber, int currentPassengers, int capacity) {
         for (JeepneyObserver observer : observers) {
             observer.update(plateNumber, currentPassengers, capacity);
         }
     }
 
-    /**
-     * Simulate a user boarding a jeepney.
-     */
     public void boardJeepney(String plateNumber) throws SQLException {
         String updateSql = "UPDATE Jeepneys SET current_passengers = current_passengers + 1 WHERE plate_number = ?";
         try (PreparedStatement pst = con.prepareStatement(updateSql)) {
@@ -42,9 +36,6 @@ public class JeepneySubject {
         notifyChange(plateNumber);
     }
 
-    /**
-     * Simulate a user leaving a jeepney.
-     */
     public void leaveJeepney(String plateNumber) throws SQLException {
         String updateSql = "UPDATE Jeepneys SET current_passengers = GREATEST(current_passengers - 1, 0) WHERE plate_number = ?";
         try (PreparedStatement pst = con.prepareStatement(updateSql)) {

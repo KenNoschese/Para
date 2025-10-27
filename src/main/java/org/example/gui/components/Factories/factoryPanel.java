@@ -4,16 +4,14 @@ import org.example.gui.appManager.ThemeManager;
 import org.example.gui.appManager.sizeManager;
 import org.example.gui.config.AnimationConfig;
 import org.example.gui.resources.Images;
-import org.example.gui.resources.RouteData;
+import org.example.DatabaseManager.RouteDatabase.RouteData;
 import org.example.gui.resources.fonts;
 import org.example.gui.appManager.darkModeToggle;
 import org.example.gui.components.RoundingOfPanels;
 import org.example.gui.components.RoundingOfButtons;
 import org.example.gui.components.RoundingOfTextfields;
-import org.example.gui.pages.mainPage;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -24,11 +22,6 @@ import static org.example.gui.resources.fonts.loadCustomFont;
 
 public class factoryPanel {
 
-    /**
-     * ==========================
-     *  Footer Panel
-     * ==========================
-     */
     public static JPanel createFooterPanel() throws IOException, FontFormatException {
         JPanel footerPanel = new JPanel();
         footerPanel.setPreferredSize(sizeManager.getInstance().getFooterSize());
@@ -43,11 +36,6 @@ public class factoryPanel {
         return footerPanel;
     }
 
-    /**
-     * ==========================
-     *  Header Panel
-     * ==========================
-     */
     public static RoundingOfButtons createUserButton() throws IOException, FontFormatException {
         RoundingOfButtons userButton;
         ThemeManager themeManager = ThemeManager.getInstance();
@@ -127,7 +115,6 @@ public class factoryPanel {
                     repaint();
                 });
                 setupPanel();
-                setupUserButton(); // ✅ added user info button setup
                 setupJeepneyAnimation();
             }
 
@@ -163,67 +150,6 @@ public class factoryPanel {
                 ImageIcon jeepIcon = images.getJeepIcon();
                 backgroundImage = cityIcon.getImage().getScaledInstance(1920, 160, Image.SCALE_SMOOTH);
                 jeepney = jeepIcon.getImage().getScaledInstance(config.jeepneyWidth, config.jeepneyHeight, Image.SCALE_SMOOTH);
-            }
-
-            private void setupUserButton() {
-                String username = "Guest";
-                String category = "N/A";
-
-                try {
-                    org.example.DatabaseManager.DatabaseInstance db = org.example.DatabaseManager.DatabaseInstance.getInstance();
-                    username = db.getActiveUsername();
-                    String pswd = db.getActivePassword();
-                    System.out.println("Active user: " + username + ", pass: " + pswd);
-
-                    if (pswd != null && !pswd.isEmpty()) {
-                        char firstDigit = pswd.charAt(0);
-                        if (firstDigit == '1') category = "Regular";
-                        else if (firstDigit == '2') category = "Student";
-                        else if (firstDigit == '3') category = "PWD";
-                        else if (firstDigit == '4') category = "Senior Citizen";
-                    }
-                } catch (Exception ignored) {}
-
-                userButton = new JButton(username + "  (" + category + ")");
-                userButton.setFont(new Font("Arial", Font.BOLD, 14));
-                userButton.setFocusPainted(false);
-                userButton.setBorderPainted(false);
-                userButton.setBackground(new Color(255, 255, 255, 180));
-                userButton.setForeground(themeManager.getBlack());
-                userButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                userButton.setBounds(15, 10, 220, 30);
-                userButton.setHorizontalAlignment(SwingConstants.LEFT);
-
-                // Simple hover + click menu simulation
-                userButton.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        userButton.setBackground(themeManager.getYellow());
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        userButton.setBackground(new Color(255, 255, 255, 180));
-                    }
-
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        JPopupMenu menu = new JPopupMenu();
-                        JMenuItem profileItem = new JMenuItem("Profile");
-                        JMenuItem logoutItem = new JMenuItem("Logout");
-                        logoutItem.addActionListener(evt -> {
-
-                            org.example.DatabaseManager.DatabaseInstance.getInstance().close();
-                            System.exit(0);
-                        });
-                        menu.add(profileItem);
-                        menu.add(logoutItem);
-                        menu.show(userButton, 0, userButton.getHeight());
-                    }
-                });
-
-
-                add(userButton);
             }
 
             private void setupJeepneyAnimation() {
@@ -271,11 +197,6 @@ public class factoryPanel {
         return headerPanel;
     }
 
-    /**
-     * ==========================
-     *  Route Panel
-     * ==========================
-     */
     public static JPanel createRoutePanel(RouteData routeData, java.util.function.Consumer<RouteData> onClick) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
@@ -467,20 +388,17 @@ public class factoryPanel {
         textLabel.setForeground(themeManager.getForegroundColor());
         textPanel.add(textLabel);
 
-        // Assemble components
         panel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         panel.add(heading);
         panel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         panel.add(textPanel);
 
-        // Optional image
         if (image != null) {
             panel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
             image.setAlignmentX(Component.CENTER_ALIGNMENT);
             panel.add(image);
         }
 
-        // Optional button
         if (includeButton) {
             RoundingOfButtons button = new RoundingOfButtons("Then press search!");
             button.setArc(30, 30);
@@ -573,8 +491,6 @@ public class factoryPanel {
         loginButton.setBackground(themeManager.getRed());
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // ✅ Updated Login Button functionality using DatabaseInstance.loginAsUser()
 
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();

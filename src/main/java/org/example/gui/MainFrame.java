@@ -12,6 +12,7 @@ import java.awt.*;
 public class MainFrame extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainPanel;
+    private mainPage currentMainPage;
 
     public MainFrame() {
         initializeFrame();
@@ -34,7 +35,6 @@ public class MainFrame extends JFrame {
             mainPanel.add(new loginPage(this::changeCard), "LOGIN");
             mainPanel.add(new signupPage(this::changeCard), "SIGNUP");
             mainPanel.add(new landingPage(this::changeCard), "LANDING");
-            mainPanel.add(new mainPage(this::changeCard), "MAIN");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -45,6 +45,28 @@ public class MainFrame extends JFrame {
     }
 
     public void changeCard(String cardName) {
+        if (cardName.equals("MAIN")) {
+            try {
+                // old mainPage will be disposed
+                if (currentMainPage != null) {
+                    currentMainPage.dispose();
+                    mainPanel.remove(currentMainPage);
+                }
+
+                // new mainPage with fresh connection so program works
+                currentMainPage = new mainPage(this::changeCard);
+                mainPanel.add(currentMainPage, "MAIN");
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                        "Error initializing main page: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
         cardLayout.show(mainPanel, cardName);
     }
 }

@@ -4,7 +4,7 @@ import org.example.DatabaseManager.RouteDatabase.StrategyClasses.LeastTransferSt
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.RouteStrategy;
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestDistanceStrategy;
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.ShortestTimeStrategy;
-import org.example.gui.resources.RouteData;
+
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Optional;

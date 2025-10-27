@@ -17,7 +17,6 @@ public class UserManager {
             String idColumn;
             String nameColumn;
 
-            // Determine correct table and column names based on category
             switch (category.toLowerCase()) {
                 case "student" -> {
                     table = "Students";
@@ -44,7 +43,6 @@ public class UserManager {
             String insertQuery = String.format("INSERT INTO %s (%s) VALUES ('%s')", table, nameColumn, name);
             st.executeUpdate(insertQuery);
 
-            // Retrieve the new auto-incremented ID
             int newId = 0;
             ResultSet rs = st.executeQuery("SELECT MAX(" + idColumn + ") AS maxid FROM " + table);
             if (rs.next()) {
@@ -53,7 +51,6 @@ public class UserManager {
             rs.close();
             System.out.println("🆔 Retrieved new ID: " + newId);
 
-            // Create DB user credentials
             String firstName = name.split(" ")[0];
             String username = firstName;
             String password = newId + firstName;
@@ -61,7 +58,6 @@ public class UserManager {
             st.executeUpdate(String.format("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'", username, password));
             System.out.println("Database user created: " + username);
 
-            //Grant SELECT privilege only on route_schema
             String grantQuery = String.format("GRANT SELECT ON route_schema.* TO '%s'@'%%'", username);
             st.executeUpdate(grantQuery);
             st.executeUpdate("FLUSH PRIVILEGES");
