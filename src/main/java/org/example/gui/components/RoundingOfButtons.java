@@ -36,4 +36,10 @@ public class RoundingOfButtons extends JButton {
         this.arcHeight = height;
         repaint();
     }
+
+    public RoundingOfButtons(String label, int arc) {
+    this(label); 
+    this.arcWidth = arc;
+    this.arcHeight = arc;
+}
 }
