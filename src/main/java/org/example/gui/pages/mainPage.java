@@ -87,6 +87,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return center;
     }
 
+    //center panel that holds the routes and information
     private JPanel createCenterPanel() throws IOException, FontFormatException {
         JPanel center = panelFactory.create(
             themeManager.getBackgroundColor(),
@@ -102,6 +103,8 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return center;
     }
 
+    //right panel holds easy access and saved panel
+
     private JPanel createRightPanel() throws IOException, FontFormatException {
         JPanel rightPanel = panelFactory.create(
             themeManager.getBackgroundColor(),
@@ -115,6 +118,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         savedLabel = createSavedLabel();
         locationsLabel = createLocationsLabel();
 
+        rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         rightPanel.add(locationsLabel);
         rightPanel.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
         rightPanel.add(createLocationsPanel());
@@ -130,6 +134,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return rightPanel;
     }
 
+    //left panel holds user input
     private JPanel createLeftJPanel() throws IOException, FontFormatException {
         JPanel leftPanel = panelFactory.create(
             themeManager.getYellow(),
@@ -322,8 +327,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 searchRoutes();
             }
         );
-
-
+        all.setBackground(null);
         JRadioButton time = radioFactory.create(
             "Shortest Time",
             loadCustomFont(fonts.DM_SANS_REGULAR, 13),
@@ -335,7 +339,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 searchRoutes();
             }
         );
-
+        time.setBackground(null);
         JRadioButton distance = radioFactory.create(
             "Shortest Distance",
             loadCustomFont(fonts.DM_SANS_REGULAR, 13),
@@ -347,7 +351,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 searchRoutes();
             }
         );
-
+        distance.setBackground(null);
         JRadioButton leastTransfer = radioFactory.create(
             "Least Transfers",
             loadCustomFont(fonts.DM_SANS_REGULAR, 13),
@@ -359,7 +363,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 searchRoutes();
             }
         );
-
+        leastTransfer.setBackground(null);
         JRadioButton cheapest = radioFactory.create(
             "Cheapest Fare",
             loadCustomFont(fonts.DM_SANS_REGULAR, 13),
@@ -371,7 +375,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 searchRoutes();
             }
         );
-
+        cheapest.setBackground(null);
 
         ButtonGroup group = new ButtonGroup();
         group.add(all);
@@ -715,7 +719,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         locationPanel.setPreferredSize(new Dimension(550, 500));
         locationPanel.setMinimumSize(new Dimension(550, 500));
         locationPanel.setMaximumSize(new Dimension(550, 500));
-        setPanelPlaceholder(locationPanel, "Wala pa ni.");
+        setPanelPlaceholder(locationPanel, "Work in progress");
         return locationPanel;
     }
 
@@ -744,6 +748,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         refreshSavedRoutesPanel();
     }
 
+    // to update the savedPanel
     private void refreshSavedRoutesPanel() {
         savedPanel.removeAll();
 
@@ -890,6 +895,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return mainContainer;
     }
 
+    // method to search routes (will be transffered to another class later on)
     private void searchRoutes() {
         try {
             if (navigationFacade == null) {
@@ -992,6 +998,7 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
         }
     }
 
+    // method to get the preffered filter and algorithm (will be transferred to another class later on)
     private RouteStrategy getStrategyForPriority(String priority) {
         switch (priority.toLowerCase()) {
             case "distance":
