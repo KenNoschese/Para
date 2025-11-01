@@ -8,9 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Optional;
 
-
-//for fetching routes, fare & time computation and managing observer updates (boarding/leaving)
-
+// For fetching routes, fare & time computation and managing observer updates (boarding/leaving)
 public class RouteManager {
     private final Connection con;
     private final JeepneySubject jeepneySubject;
@@ -21,9 +19,7 @@ public class RouteManager {
     }
 
     public void addJeepneyObserver(JeepneyObserver observer) {
-        if (observer != null) {
-            jeepneySubject.registerObserver(observer);
-        }
+        if (observer != null) jeepneySubject.registerObserver(observer);
     }
 
     public void boardJeepney(String plateNumber) throws SQLException {
@@ -39,11 +35,12 @@ public class RouteManager {
     }
 
     public void close() throws SQLException {
-        if (con != null && !con.isClosed()) {
-            con.close();
-        }
+        if (con != null && !con.isClosed()) con.close();
     }
 
+    // =======================================================
+    // === FIND DIRECT ROUTES ===
+    // =======================================================
     public ArrayList<RouteData> findRoutes(String from, String to, String category) throws SQLException {
         ArrayList<RouteData> routes = new ArrayList<>();
         boolean isInbound = detectDirection(from, to);
@@ -99,9 +96,7 @@ public class RouteManager {
                     double perKmRate = rs.getDouble("per_km_rate");
 
                     double fare = baseFare;
-                    if (distanceKm > baseDist) {
-                        fare += (distanceKm - baseDist) * perKmRate;
-                    }
+                    if (distanceKm > baseDist) fare += (distanceKm - baseDist) * perKmRate;
                     if (fare < 12.0) fare = 12.0;
 
                     double discount = getDiscountRate(category);
@@ -126,10 +121,12 @@ public class RouteManager {
                 }
             }
         }
-
         return routes;
     }
 
+    // =======================================================
+    // === DIRECTION DETECTION ===
+    // =======================================================
     private boolean detectDirection(String from, String to) {
         String dirQuery = """
             SELECT rs_from.stop_order AS from_order, rs_to.stop_order AS to_order
@@ -140,54 +137,72 @@ public class RouteManager {
             WHERE s_from.stop_name = ? AND s_to.stop_name = ?
             LIMIT 1;
         """;
-
         try (PreparedStatement pst = con.prepareStatement(dirQuery)) {
             pst.setString(1, from);
             pst.setString(2, to);
             ResultSet rs = pst.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("from_order") < rs.getInt("to_order");
-            }
+            if (rs.next()) return rs.getInt("from_order") < rs.getInt("to_order");
         } catch (SQLException e) {
             System.out.println("[WARN] Direction detection failed: " + e.getMessage());
         }
         return true;
     }
 
+    // =======================================================
+    // === STOPS FETCHER ===
+    // =======================================================
     private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to) throws SQLException {
         ArrayList<String> stops = new ArrayList<>();
 
+        String orderQuery = """
+            SELECT stop_order 
+            FROM Route_Stops rs
+            JOIN Stops s ON rs.stop_id = s.stop_id
+            WHERE rs.route_id = ? AND s.stop_name = ?;
+        """;
+
+        int fromOrder = -1, toOrder = -1;
+        try (PreparedStatement pst = con.prepareStatement(orderQuery)) {
+            pst.setInt(1, routeId);
+            pst.setString(2, from);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) fromOrder = rs.getInt("stop_order");
+            }
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(orderQuery)) {
+            pst.setInt(1, routeId);
+            pst.setString(2, to);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) toOrder = rs.getInt("stop_order");
+            }
+        }
+
+        if (fromOrder == -1 || toOrder == -1) {
+            System.err.println("⚠️ Stops not found for route " + routeId + " (" + from + " → " + to + ")");
+            return stops;
+        }
+
+        boolean ascending = fromOrder < toOrder;
         String stopQuery = """
             SELECT s.stop_name
             FROM Route_Stops rs
             JOIN Stops s ON rs.stop_id = s.stop_id
             WHERE rs.route_id = ?
-              AND rs.stop_order BETWEEN 
-                  (SELECT rsf.stop_order 
-                   FROM Route_Stops rsf 
-                   JOIN Stops sf ON rsf.stop_id = sf.stop_id 
-                   WHERE rsf.route_id = ? AND sf.stop_name = ? LIMIT 1)
-              AND 
-                  (SELECT rst.stop_order 
-                   FROM Route_Stops rst 
-                   JOIN Stops st ON rst.stop_id = st.stop_id 
-                   WHERE rst.route_id = ? AND st.stop_name = ? LIMIT 1)
-            ORDER BY rs.stop_order;
-        """;
+              AND rs.stop_order BETWEEN ? AND ?
+            ORDER BY rs.stop_order %s;
+        """.formatted(ascending ? "" : "DESC");
 
         try (PreparedStatement pst = con.prepareStatement(stopQuery)) {
             pst.setInt(1, routeId);
-            pst.setInt(2, routeId);
-            pst.setString(3, from);
-            pst.setInt(4, routeId);
-            pst.setString(5, to);
+            pst.setInt(2, Math.min(fromOrder, toOrder));
+            pst.setInt(3, Math.max(fromOrder, toOrder));
 
             try (ResultSet rs = pst.executeQuery()) {
-                while (rs.next()) {
-                    stops.add(rs.getString("stop_name"));
-                }
+                while (rs.next()) stops.add(rs.getString("stop_name"));
             }
         }
+
         return stops;
     }
 
@@ -199,18 +214,20 @@ public class RouteManager {
         };
     }
 
+    // =======================================================
+    // === FIND ROUTES WITH TRANSFERS ===
+    // =======================================================
     public ArrayList<ArrayList<RouteData>> findRoutesWithTransfers(String from, String to, String category) throws SQLException {
         ArrayList<ArrayList<RouteData>> allRoutes = new ArrayList<>();
 
-        // find direct routes
+        // include direct routes
         ArrayList<RouteData> directRoutes = findRoutes(from, to, category);
-        allRoutes.addAll(directRoutes.stream().map(route -> {
-            ArrayList<RouteData> singleRoute = new ArrayList<>();
-            singleRoute.add(route);
-            return singleRoute;
+        allRoutes.addAll(directRoutes.stream().map(r -> {
+            ArrayList<RouteData> single = new ArrayList<>();
+            single.add(r);
+            return single;
         }).toList());
 
-        // find routes with one transfer
         String sql = """
             SELECT DISTINCT
                 r1.route_id AS from_route_id,
@@ -245,82 +262,84 @@ public class RouteManager {
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, from);
             pst.setString(2, to);
+            ResultSet rs = pst.executeQuery();
 
-            try (ResultSet rs = pst.executeQuery()) {
-                while (rs.next()) {
-                    // first segment, from to transfer_stop
-                    String fromRouteName = rs.getString("from_route_name");
-                    String transferStop = rs.getString("transfer_stop");
-                    int fromRouteId = rs.getInt("from_route_id");
-                    double fromDistanceKm = Math.abs(rs.getDouble("transfer_from_order") - rs.getDouble("from_order"));
-                    double fromBaseFare = rs.getDouble("from_base_fare");
-                    double fromBaseDist = rs.getDouble("from_base_distance_km");
-                    double fromPerKmRate = rs.getDouble("from_per_km_rate");
+            while (rs.next()) {
+                String transferStop = rs.getString("transfer_stop");
 
-                    double fromFare = fromBaseFare;
-                    if (fromDistanceKm > fromBaseDist) {
-                        fromFare += (fromDistanceKm - fromBaseDist) * fromPerKmRate;
-                    }
-                    if (fromFare < 12.0) fromFare = 12.0;
-                    double discount = getDiscountRate(category);
-                    fromFare *= (1 - discount);
+                // --- Segment 1 ---
+                int fromRouteId = rs.getInt("from_route_id");
+                String fromRouteName = rs.getString("from_route_name");
+                double fromDistanceKm = Math.abs(rs.getDouble("transfer_from_order") - rs.getDouble("from_order"));
+                double fromFare = computeFare(rs.getDouble("from_base_fare"),
+                        rs.getDouble("from_base_distance_km"),
+                        rs.getDouble("from_per_km_rate"),
+                        fromDistanceKm,
+                        category);
+                ArrayList<String> fromStopsList = getAllStopsForRoute(fromRouteId, from, transferStop);
 
-                    RouteData fromRoute = new RouteData();
-                    fromRoute.setRoute(fromRouteName);
-                    fromRoute.setFromLocation(from);
-                    fromRoute.setDestination(transferStop);
-                    fromRoute.setDistance((int) fromDistanceKm);
-                    fromRoute.setFare(fromFare);
-                    fromRoute.setDetails(category);
-                    fromRoute.setRouteStops(getAllStopsForRoute(fromRouteId, from, transferStop));
+                RouteData fromRoute = new RouteData();
+                fromRoute.setRoute(fromRouteName);
+                fromRoute.setFromLocation(from);
+                fromRoute.setDestination(transferStop);
+                fromRoute.setDistance((int) fromDistanceKm);
+                fromRoute.setFare(fromFare);
+                fromRoute.setDetails(category);
+                fromRoute.setRouteStops(fromStopsList);
+                fromRoute.setStops(fromStopsList.size());
+                fromRoute.setEta((int) Math.ceil(fromDistanceKm * 3));
 
-                    //second segment transfer_stop to destination
-                    String toRouteName = rs.getString("to_route_name");
-                    int toRouteId = rs.getInt("to_route_id");
-                    double toDistanceKm = Math.abs(rs.getDouble("to_order") - rs.getDouble("transfer_to_order"));
-                    double toBaseFare = rs.getDouble("to_base_fare");
-                    double toBaseDist = rs.getDouble("to_base_distance_km");
-                    double toPerKmRate = rs.getDouble("to_per_km_rate");
+                // --- Segment 2 ---
+                int toRouteId = rs.getInt("to_route_id");
+                String toRouteName = rs.getString("to_route_name");
+                double toDistanceKm = Math.abs(rs.getDouble("to_order") - rs.getDouble("transfer_to_order"));
+                double toFare = computeFare(rs.getDouble("to_base_fare"),
+                        rs.getDouble("to_base_distance_km"),
+                        rs.getDouble("to_per_km_rate"),
+                        toDistanceKm,
+                        category);
+                ArrayList<String> toStopsList = getAllStopsForRoute(toRouteId, transferStop, to);
 
-                    double toFare = toBaseFare;
-                    if (toDistanceKm > toBaseDist) {
-                        toFare += (toDistanceKm - toBaseDist) * toPerKmRate;
-                    }
-                    if (toFare < 12.0) toFare = 12.0;
-                    toFare *= (1 - discount);
+                RouteData toRoute = new RouteData();
+                toRoute.setRoute(toRouteName);
+                toRoute.setFromLocation(transferStop);
+                toRoute.setDestination(to);
+                toRoute.setDistance((int) toDistanceKm);
+                toRoute.setFare(toFare);
+                toRoute.setDetails(category);
+                toRoute.setRouteStops(toStopsList);
+                toRoute.setStops(toStopsList.size());
+                toRoute.setEta((int) Math.ceil(toDistanceKm * 3));
 
-                    RouteData toRoute = new RouteData();
-                    toRoute.setRoute(toRouteName);
-                    toRoute.setFromLocation(transferStop);
-                    toRoute.setDestination(to);
-                    toRoute.setDistance((int) toDistanceKm);
-                    toRoute.setFare(toFare);
-                    toRoute.setDetails(category);
-                    toRoute.setRouteStops(getAllStopsForRoute(toRouteId, transferStop, to));
-
-                    //combine into a single route with transfer
-                    ArrayList<RouteData> transferRoute = new ArrayList<>();
-                    transferRoute.add(fromRoute);
-                    transferRoute.add(toRoute);
-                    allRoutes.add(transferRoute);
-                }
+                ArrayList<RouteData> transferRoute = new ArrayList<>();
+                transferRoute.add(fromRoute);
+                transferRoute.add(toRoute);
+                allRoutes.add(transferRoute);
             }
         }
-
         return allRoutes;
     }
 
-    //main method for testing purposes
+    private double computeFare(double baseFare, double baseDist, double perKmRate, double distanceKm, String category) {
+        double fare = baseFare;
+        if (distanceKm > baseDist) fare += (distanceKm - baseDist) * perKmRate;
+        if (fare < 12.0) fare = 12.0;
+        return fare * (1 - getDiscountRate(category));
+    }
+
+    // =======================================================
+    // === MAIN TEST METHOD ===
+    // =======================================================
     public static void main(String[] args) {
         RouteManager routeManager = null;
         try {
             routeManager = new RouteManager();
 
-            String from = "puan";
-            String to = "mintal";
+            String from = "Toril";
+            String to = "GMall Bajada";
             String category = "Regular";
 
-            System.out.println("=== Route Debug: Bangkal to GMall Bajada (Least Transfers) ===");
+            System.out.println("=== Route Debug: " + from + " → " + to + " (Least Transfers) ===");
             System.out.println("Passenger Category: " + category);
 
             ArrayList<ArrayList<RouteData>> allRoutes = routeManager.findRoutesWithTransfers(from, to, category);
@@ -340,39 +359,50 @@ public class RouteManager {
 
             ArrayList<RouteData> route = bestRoute.get();
             System.out.println("\nBest Route (Least Transfers):");
+
             double totalFare = 0.0;
             double totalDistance = 0.0;
+            int totalStops = 0;
+            int totalEta = 0;
 
             if (route.size() == 1) {
-                RouteData directRoute = route.get(0);
-                System.out.printf("  Direct Route: %s%n", directRoute.getRoute());
-                System.out.printf("  Stops: %s%n", String.join(" -> ", directRoute.getRouteStops()));
-                System.out.printf("  Fare: ₱%.2f%n", directRoute.getFare());
-                System.out.printf("  Distance: %d km%n", directRoute.getDistance());
-                totalFare = directRoute.getFare();
-                totalDistance = directRoute.getDistance();
+                RouteData r = route.get(0);
+                System.out.printf("  Direct Route: %s%n", r.getRoute());
+                System.out.printf("  Stops: %s%n", String.join(" -> ", r.getRouteStops()));
+                System.out.printf("  Stops Count: %d%n", r.getStops());
+                System.out.printf("  ETA: %d minutes%n", r.getEta());
+                System.out.printf("  Fare: ₱%.2f%n", r.getFare());
+                System.out.printf("  Distance: %d km%n", r.getDistance());
+                totalFare = r.getFare();
+                totalDistance = r.getDistance();
+                totalStops = r.getStops();
+                totalEta = r.getEta();
             } else {
                 System.out.println("  Transfer Route:");
                 for (int i = 0; i < route.size(); i++) {
-                    RouteData segment = route.get(i);
+                    RouteData seg = route.get(i);
                     System.out.printf("    Segment %d: %s (from %s to %s)%n",
-                            i + 1, segment.getRoute(), segment.getFromLocation(), segment.getDestination());
-                    System.out.printf("      Stops: %s%n", String.join(" -> ", segment.getRouteStops()));
-                    System.out.printf("      Fare: ₱%.2f%n", segment.getFare());
-                    System.out.printf("      Distance: %d km%n", segment.getDistance());
-                    totalFare += segment.getFare();
-                    totalDistance += segment.getDistance();
+                            i + 1, seg.getRoute(), seg.getFromLocation(), seg.getDestination());
+                    System.out.printf("      Stops: %s%n", String.join(" -> ", seg.getRouteStops()));
+                    System.out.printf("      Stops Count: %d%n", seg.getStops());
+                    System.out.printf("      ETA: %d minutes%n", seg.getEta());
+                    System.out.printf("      Fare: ₱%.2f%n", seg.getFare());
+                    System.out.printf("      Distance: %d km%n", seg.getDistance());
+                    totalFare += seg.getFare();
+                    totalDistance += seg.getDistance();
+                    totalStops += seg.getStops();
+                    totalEta += seg.getEta();
                 }
             }
 
+            System.out.printf("  Total ETA: %d minutes%n", totalEta);
+            System.out.printf("  Total Stops: %d%n", totalStops);
             System.out.printf("  Total Fare: ₱%.2f%n", totalFare);
             System.out.printf("  Total Distance: %.0f km%n", totalDistance);
 
         } catch (SQLException e) {
             System.err.println("[ERROR] Failed to query routes: " + e.getMessage());
-            e.printStackTrace();
         } finally {
-
             if (routeManager != null) {
                 try {
                     routeManager.close();

@@ -12,7 +12,7 @@ public class DatabaseInstance {
 
     private final String db = "route_schema";
     private String uname = "root";
-    private String pswd = "Ken11514!";
+    private String pswd = "1234";
 
     private DatabaseInstance(String uname, String pswd) {
         try {
@@ -35,7 +35,7 @@ public class DatabaseInstance {
     }
 
     private DatabaseInstance() {
-        this("root", "Ken11514!");
+        this("root", "1234");
     }
 
     public static synchronized DatabaseInstance getInstance() {
