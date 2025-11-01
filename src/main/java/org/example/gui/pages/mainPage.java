@@ -468,9 +468,9 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
             String category = getUserCategory();
 
             if (currentFilter.equals("all")) {
-                // ONE source of truth – includes direct & transfer routes
+                // === ALL ROUTES ===
                 ArrayList<ArrayList<RouteData>> allPossible = routeManager.findRoutesWithTransfers(from, to, category);
-                allPossible = removeDuplicateRouteOptions(allPossible);   // optional
+                allPossible = removeDuplicateRouteOptions(allPossible);
 
                 if (allPossible.isEmpty()) {
                     JOptionPane.showMessageDialog(this,
@@ -479,43 +479,38 @@ public class mainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     displayAllRoutes(allPossible, from, to);
                 } else {
                     displayAllRoutes(allPossible, from, to);
-                    // show first route in info panel
                     ArrayList<RouteData> first = allPossible.get(0);
                     if (first.size() == 1) displayRouteInfo(first.get(0));
                     else displayTransferRouteInfo(first);
                 }
             } else {
-                // ----- FILTERED SEARCH (best according to priority) -----
-                RouteData bestDirect = navigationFacade.findBestRoute(from, to, category, currentFilter);
-                if (bestDirect != null) {
-                    ArrayList<ArrayList<RouteData>> single = new ArrayList<>();
-                    displayAllRoutes(single, from, to);
-                    displayRouteInfo(bestDirect);
+                // === FILTERED SEARCH (Shortest Time / Distance / Fare) ===
+                ArrayList<RouteData> bestFullRoute = navigationFacade.findBestRoute(from, to, category, currentFilter);
+
+                if (bestFullRoute == null || bestFullRoute.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                            "No routes found for the selected filter.",
+                            "No Results", JOptionPane.INFORMATION_MESSAGE);
+                    displayAllRoutes(new ArrayList<>(), from, to);
                     return;
                 }
 
-                // still no direct → look for best transfer
-                ArrayList<ArrayList<RouteData>> transfers = routeManager.findRoutesWithTransfers(from, to, category);
-                if (!transfers.isEmpty()) {
-                    RouteStrategy strategy = getStrategyForPriority(currentFilter);
-                    navigationFacade.setRouteStrategy(strategy);
-                    Optional<ArrayList<RouteData>> bestTransfer = strategy.findBestTransferRoute(transfers);
-                    if (bestTransfer.isPresent()) {
-                        ArrayList<ArrayList<RouteData>> single = new ArrayList<>();
-                        single.add(bestTransfer.get());
-                        displayAllRoutes(single, from, to);
-                        displayTransferRouteInfo(bestTransfer.get());
-                        return;
-                    }
+                // Show the FULL best route (direct or transfer)
+                ArrayList<ArrayList<RouteData>> single = new ArrayList<>();
+                single.add(bestFullRoute);
+                displayAllRoutes(single, from, to);
+
+                if (bestFullRoute.size() > 1) {
+                    displayTransferRouteInfo(bestFullRoute);
+                } else {
+                    displayRouteInfo(bestFullRoute.get(0));
                 }
-                JOptionPane.showMessageDialog(this,
-                        "No routes found for the selected filter.",
-                        "No Results", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 

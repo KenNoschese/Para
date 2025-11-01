@@ -7,4 +7,3 @@ public interface RouteStrategy {
     Optional<RouteData> findBestRoute(ArrayList<RouteData> routes);
     Optional<ArrayList<RouteData>> findBestTransferRoute(ArrayList<ArrayList<RouteData>> transferRoutes);       
 }
-

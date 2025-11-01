@@ -16,4 +16,3 @@ public class ShortestDistanceStrategy implements RouteStrategy {
                         list.stream().mapToDouble(RouteData::getDistance).sum()));
     }
 }
-

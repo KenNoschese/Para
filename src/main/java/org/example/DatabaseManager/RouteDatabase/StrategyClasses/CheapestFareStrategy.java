@@ -4,7 +4,7 @@ import org.example.DatabaseManager.RouteDatabase.RouteData;
 
 import java.util.*;
 
-public class CheapestFareStrategy implements RouteStrategy{
+public class CheapestFareStrategy implements RouteStrategy {
     @Override
     public Optional<RouteData> findBestRoute(ArrayList<RouteData> routes) {
         return routes.stream().min(Comparator.comparingDouble(RouteData::getFare));

@@ -18,4 +18,3 @@ public class ShortestTimeStrategy implements RouteStrategy {
                         routeList.stream().mapToDouble(RouteData::getEta).sum()));
     }
 }
-
