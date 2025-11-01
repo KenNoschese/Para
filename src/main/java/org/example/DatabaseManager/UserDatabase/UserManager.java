@@ -1,94 +1,52 @@
 package org.example.DatabaseManager.UserDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
+
 import javax.swing.*;
 import java.sql.*;
 
 public class UserManager {
-    private final Connection con;
+    // Connection is now the *single* app connection
+    private final Connection con = DatabaseInstance.getInstance().getConnection();
 
-    public UserManager() {
-        this.con = DatabaseInstance.getInstance().getConnection();
-    }
-
-    public void signUpUser(String name, String category, String password) {
-        try (Statement st = con.createStatement()) {
-            String table;
-            String idColumn;
-            String nameColumn;
-
-            switch (category.toLowerCase()) {
-                case "student" -> {
-                    table = "Students";
-                    idColumn = "stu_id";
-                    nameColumn = "stu_name";
-                }
-                case "pwd" -> {
-                    table = "PWDs";
-                    idColumn = "pwd_id";
-                    nameColumn = "pwd_name";
-                }
-                case "senior citizen" -> {
-                    table = "SeniorCitizens";
-                    idColumn = "sen_id";
-                    nameColumn = "sen_name";
-                }
-                default -> { // Regulars
-                    table = "Regulars";
-                    idColumn = "reg_id";
-                    nameColumn = "reg_name";
+    public void signUpUser(String name, String password) {
+        try {
+            // 1. Insert into Regulars → get generated reg_id
+            String sqlReg = "INSERT INTO Regulars (reg_name) VALUES (?)";
+            int newId;
+            try (PreparedStatement ps = con.prepareStatement(sqlReg, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, name);
+                ps.executeUpdate();
+                try (ResultSet gen = ps.getGeneratedKeys()) {
+                    gen.next();
+                    newId = gen.getInt(1);
                 }
             }
 
-            // Insert name into category table
-            String insertQuery = String.format("INSERT INTO %s (%s) VALUES ('%s')", table, nameColumn, name);
-            st.executeUpdate(insertQuery);
+            // 2. Build username (firstName + id)
+            String firstName = name.split("\\s+")[0];
+            String username = firstName + "_" + newId;
 
-            // Get new ID
-            int newId = 0;
-            ResultSet rs = st.executeQuery("SELECT MAX(" + idColumn + ") AS maxid FROM " + table);
-            if (rs.next()) {
-                newId = rs.getInt("maxid");
+            // 3. Insert into UserAccounts
+            String sqlAcc = "INSERT INTO UserAccounts (username, password, category, linked_id) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlAcc)) {
+                ps.setString(1, username);
+                ps.setString(2, password);
+                ps.setString(3, "Regular");
+                ps.setInt(4, newId);
+                ps.executeUpdate();
             }
-            rs.close();
 
-            System.out.println("🆔 Retrieved new ID: " + newId);
-
-            // Use user's first name as username
-            String firstName = name.split(" ")[0];
-            String username = firstName;
-
-            // 🔐 Use the password the user entered
-            st.executeUpdate(String.format("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'", username, password));
-            System.out.println("Database user created: " + username);
-
-            String grantQuery = String.format("GRANT SELECT ON route_schema.* TO '%s'@'%%'", username);
-            st.executeUpdate(grantQuery);
-            st.executeUpdate("FLUSH PRIVILEGES");
-
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Account Created Successfully!\n\nUsername: " + username + "\nPassword: " + password,
-                    "Signup Success",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+            JOptionPane.showMessageDialog(null,
+                    "Account Created!\nUsername: " + username + "\nPassword: " + password,
+                    "Signup Success", JOptionPane.INFORMATION_MESSAGE);
+            System.out.println("User created: " + username);
 
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(
-                    null,
+            JOptionPane.showMessageDialog(null,
                     "Signup failed: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-            System.out.println("SQL Error: " + e.getMessage());
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Unexpected error: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-            System.out.println("Unexpected error: " + e.getMessage());
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("SQL error on signup: " + e.getMessage());
         }
     }
 }

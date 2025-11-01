@@ -1,5 +1,6 @@
 package org.example.gui.pages;
 
+import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.components.RoundingOfButtons;
 import org.example.gui.components.RoundingOfTextfields;
 import org.example.gui.components.RoundingOfPasswordField;
@@ -67,7 +68,7 @@ public class loginPage extends JPanel {
         usernameField.setBorderColor(themeManager.getGray());
         usernameField.setPlaceholder("Username");
 
-        // Password field (masked)
+        // Password field
         RoundingOfPasswordField passwordField = new RoundingOfPasswordField(20);
         passwordField.setMaximumSize(new Dimension(400, 45));
         passwordField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
@@ -85,19 +86,17 @@ public class loginPage extends JPanel {
         signUpButton.setBackground(themeManager.getBlack());
         signUpButton.setBorder(BorderFactory.createEmptyBorder());
         signUpButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         signUpButton.addActionListener(e -> {
             System.out.println("➡️ Sign Up button clicked");
             cardChanger.accept("SIGNUP");
         });
 
-        // “OR” label
         JLabel orLabel = new JLabel("---------- or ----------", SwingConstants.CENTER);
         orLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
         orLabel.setForeground(themeManager.getGray());
         orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Login button
+        // Login button (actual login logic here)
         RoundingOfButtons loginButton = new RoundingOfButtons("Login");
         loginButton.setArc(30, 30);
         loginButton.setMaximumSize(new Dimension(400, 45));
@@ -107,7 +106,7 @@ public class loginPage extends JPanel {
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Login logic
+        // ✅ Updated login logic that switches DB connection
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
@@ -119,43 +118,36 @@ public class loginPage extends JPanel {
                 return;
             }
 
-            char firstDigit = password.charAt(0);
-            String category;
-            if (firstDigit == '1') category = "Regular";
-            else if (firstDigit == '2') category = "Student";
-            else if (firstDigit == '3') category = "PWD";
-            else if (firstDigit == '4') category = "Senior Citizen";
-            else category = "Unknown";
-
-            if (category.equals("Unknown")) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Invalid password format. Cannot identify category.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
             try {
-                System.out.println("Attempting login for user: " + username + " (" + category + ")");
-                boolean success = org.example.DatabaseManager.DatabaseInstance.loginAsUser(username, password);
+                System.out.println("Attempting login for user: " + username);
+
+                boolean success = DatabaseInstance.loginAsUser(username, password);
 
                 if (success) {
                     JOptionPane.showMessageDialog(mainPanel,
-                            "✅ Login successful!\nWelcome, " + username + " (" + category + ")",
+                            "✅ Login successful!\nWelcome, " + username,
                             "Login Success", JOptionPane.INFORMATION_MESSAGE);
-                    System.out.println("✅ Logged in as: " + username + " (" + category + ")");
+
+                    // Set logged-in user
+                    DatabaseInstance.setLoggedInUser(username, null);
+
+                    // Confirm connection user
+                    System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
+
+                    // Move to landing page
                     cardChanger.accept("LANDING");
                 } else {
                     JOptionPane.showMessageDialog(mainPanel,
                             "Invalid username or password.",
                             "Login Failed", JOptionPane.ERROR_MESSAGE);
-                    System.out.println("Login failed for user: " + username);
+                    System.out.println("❌ Login failed for user: " + username);
                 }
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(mainPanel,
                         "Unexpected error: " + ex.getMessage(),
                         "Error", JOptionPane.ERROR_MESSAGE);
-                System.out.println("Unexpected error: " + ex.getMessage());
+                System.out.println("Unexpected error during login: " + ex.getMessage());
             }
         });
 

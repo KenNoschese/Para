@@ -1,5 +1,6 @@
 package org.example.gui.components.Factories;
 
+import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.appManager.sizeManager;
 import org.example.gui.config.AnimationConfig;
@@ -13,10 +14,13 @@ import org.example.gui.components.RoundingOfTextfields;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import static org.example.gui.resources.fonts.loadCustomFont;
 
@@ -37,27 +41,19 @@ public class factoryPanel {
     }
 
     public static RoundingOfButtons createUserButton() throws IOException, FontFormatException {
-        RoundingOfButtons userButton;
         ThemeManager themeManager = ThemeManager.getInstance();
-        String username = "Guest";
-        String category = "N/A";
 
-        try {
-            org.example.DatabaseManager.DatabaseInstance db = org.example.DatabaseManager.DatabaseInstance.getInstance();
-            username = db.getActiveUsername();
-            String pswd = db.getActivePassword();
-            System.out.println("Active user: " + username + ", pass: " + pswd);
+        // Get current app user
+        String username = DatabaseInstance.getCurrentAppUser();
+        if (username == null || username.isEmpty()) {
+            username = "Guest";
+        }
 
-            if (pswd != null && !pswd.isEmpty()) {
-                char firstDigit = pswd.charAt(0);
-                if (firstDigit == '1') category = "Regular";
-                else if (firstDigit == '2') category = "Student";
-                else if (firstDigit == '3') category = "PWD";
-                else if (firstDigit == '4') category = "Senior Citizen";
-            }
-        } catch (Exception ignored) {}
+        // Final copy for inner class
+        final String displayName = username;
 
-        userButton = new RoundingOfButtons(username + "  (" + category + ")");
+        // Create button
+        RoundingOfButtons userButton = new RoundingOfButtons(displayName);
         userButton.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         userButton.setFocusPainted(false);
         userButton.setBorderPainted(false);
@@ -67,6 +63,7 @@ public class factoryPanel {
         userButton.setBounds(15, 10, 220, 30);
         userButton.setHorizontalAlignment(SwingConstants.LEFT);
 
+        // Hover + Click
         userButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -81,14 +78,23 @@ public class factoryPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 JPopupMenu menu = new JPopupMenu();
+
                 JMenuItem profileItem = new JMenuItem("Profile");
+                profileItem.addActionListener(evt -> {
+                    JOptionPane.showMessageDialog(null,
+                            "Username: " + displayName + "\n(Profile feature coming soon)",
+                            "User Profile", JOptionPane.INFORMATION_MESSAGE);
+                });
+
                 JMenuItem logoutItem = new JMenuItem("Logout");
                 logoutItem.addActionListener(evt -> {
-
-                    org.example.DatabaseManager.DatabaseInstance.getInstance().close();
+                    DatabaseInstance.setLoggedInUser(null, null);
+                    JOptionPane.showMessageDialog(null, "You have been logged out.", "Logout", JOptionPane.INFORMATION_MESSAGE);
                     System.exit(0);
                 });
+
                 menu.add(profileItem);
+                menu.addSeparator();
                 menu.add(logoutItem);
                 menu.show(userButton, 0, userButton.getHeight());
             }
@@ -126,9 +132,9 @@ public class factoryPanel {
 
                 JLabel logo = Images.getInstance().getParaLogoLabel(175, 175);
                 logo.setBounds((getWidth() / 2) - 87, 0, 175, 175); // center when resized
-                addComponentListener(new java.awt.event.ComponentAdapter() {
+                addComponentListener(new ComponentAdapter() {
                     @Override
-                    public void componentResized(java.awt.event.ComponentEvent e) {
+                    public void componentResized(ComponentEvent e) {
                         logo.setBounds((getWidth() / 2) - 87, 0, 175, 175);
                     }
                 });
@@ -138,9 +144,9 @@ public class factoryPanel {
                 toggle.setBounds(getWidth() - 80, 20, 50, 30);
                 add(toggle);
 
-                addComponentListener(new java.awt.event.ComponentAdapter() {
+                addComponentListener(new ComponentAdapter() {
                     @Override
-                    public void componentResized(java.awt.event.ComponentEvent e) {
+                    public void componentResized(ComponentEvent e) {
                         toggle.setBounds(getWidth() - 80, 20, 50, 30);
                     }
                 });
@@ -197,7 +203,7 @@ public class factoryPanel {
         return headerPanel;
     }
 
-    public static JPanel createRoutePanel(RouteData routeData, java.util.function.Consumer<RouteData> onClick) throws IOException, FontFormatException {
+    public static JPanel createRoutePanel(RouteData routeData, Consumer<RouteData> onClick) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
 
@@ -210,7 +216,7 @@ public class factoryPanel {
         routePanel.setOpaque(true);
 
         JLabel routeTitle = new JLabel(routeData.getRoute());
-        routeTitle.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 16));
+        routeTitle.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16));
         routeTitle.setForeground(themeManager.getBlack());
         routePanel.add(routeTitle);
         routePanel.add(Box.createHorizontalStrut(30));
@@ -218,7 +224,7 @@ public class factoryPanel {
         JLabel detailsLabel = new JLabel(String.format(
                 "<html><b>Details:</b> %s</html>", routeData.getDetails()
         ));
-        detailsLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14));
+        detailsLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
         detailsLabel.setForeground(themeManager.getBlack());
         routePanel.add(detailsLabel);
 
@@ -228,13 +234,13 @@ public class factoryPanel {
                 routeData.getStops(),
                 routeData.getEta()
         ));
-        infoLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 13));
+        infoLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         infoLabel.setForeground(themeManager.getForegroundColor());
         routePanel.add(infoLabel);
         routePanel.add(Box.createHorizontalStrut(30));
 
         JLabel fareLabel = new JLabel(String.format("Php %.2f", routeData.getFare()));
-        fareLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 14));
+        fareLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14));
         fareLabel.setForeground(themeManager.getBlack());
         routePanel.add(fareLabel);
 
@@ -275,7 +281,7 @@ public class factoryPanel {
         return routePanel;
     }
 
-    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, java.util.function.Consumer<ArrayList<RouteData>> onClick) throws IOException, FontFormatException {
+    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, Consumer<ArrayList<RouteData>> onClick) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
 
@@ -357,7 +363,7 @@ public class factoryPanel {
             JLabel image,
             String themeColor,
             boolean includeButton,
-            java.util.function.Consumer<String> cardChanger
+            Consumer<String> cardChanger
     ) throws IOException, FontFormatException {
 
         ThemeManager themeManager = ThemeManager.getInstance();
@@ -372,7 +378,7 @@ public class factoryPanel {
         // Heading
         JLabel heading = new JLabel("Step " + stepNumber);
         heading.setAlignmentX(Component.CENTER_ALIGNMENT);
-        heading.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 18f));
+        heading.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 18f));
         heading.setForeground(themeManager.getForegroundColor());
 
         // Text panel
@@ -384,7 +390,7 @@ public class factoryPanel {
 
         String labelText = textLines.length > 1 ? "<html>" + String.join("<br>", textLines) + "</html>" : textLines[0];
         JLabel textLabel = new JLabel(labelText);
-        textLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        textLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
         textLabel.setForeground(themeManager.getForegroundColor());
         textPanel.add(textLabel);
 
@@ -404,7 +410,7 @@ public class factoryPanel {
             button.setArc(30, 30);
             button.setAlignmentX(Component.CENTER_ALIGNMENT);
             button.setPreferredSize(new Dimension(30, 20));
-            button.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+            button.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
             button.setBackground(themeManager.getRed());
             button.setForeground(themeManager.getPink());
 

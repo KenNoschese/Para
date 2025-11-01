@@ -73,23 +73,8 @@ public class signupPage extends JPanel {
         confirmPassField.setPlaceholder("Confirm Password");
         confirmPassField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Category Label + Box
-        JLabel categoryLabel = new JLabel("Select Category", SwingConstants.CENTER);
-        categoryLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        categoryLabel.setForeground(themeManager.getBlack());
-        categoryLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        String[] categories = {"Regular", "Student", "PWD", "Senior Citizen"};
-        JComboBox<String> categoryBox = new JComboBox<>(categories);
-        categoryBox.setMaximumSize(new Dimension(400, 45));
-        categoryBox.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        categoryBox.setForeground(themeManager.getBlack());
-        categoryBox.setBackground(themeManager.getWhite());
-        categoryBox.setAlignmentX(Component.CENTER_ALIGNMENT);
-        categoryBox.setFocusable(false);
-
         // Create Account Button
-        JButton createButton = getJButton(nameField, passField, confirmPassField, categoryBox);
+        JButton createButton = getJButton(nameField, passField, confirmPassField);
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Back Button
@@ -115,10 +100,6 @@ public class signupPage extends JPanel {
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         formContent.add(confirmPassField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
-        formContent.add(categoryLabel);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
-        formContent.add(categoryBox);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(createButton);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(backButton);
@@ -127,16 +108,13 @@ public class signupPage extends JPanel {
         add(formPanel, BorderLayout.CENTER);
     }
 
-    // ✅ Updated getJButton method
-    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField, JComboBox<String> categoryBox) {
+    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField) {
         ThemeManager themeManager = ThemeManager.getInstance();
 
         RoundingOfButtons createButton = new RoundingOfButtons("Create Account");
         createButton.setArc(30, 30);
         createButton.setMaximumSize(new Dimension(400, 45));
-        try {
-            createButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        } catch (Exception ignored) {}
+        try { createButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
         createButton.setForeground(themeManager.getWhite());
         createButton.setBackground(themeManager.getBlack());
         createButton.setBorder(BorderFactory.createEmptyBorder());
@@ -145,21 +123,22 @@ public class signupPage extends JPanel {
             String name = nameField.getText().trim();
             String password = passField.getText().trim();
             String confirmPassword = confirmPassField.getText().trim();
-            String category = categoryBox.getSelectedItem().toString();
 
             if (name.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             if (!password.equals(confirmPassword)) {
-                JOptionPane.showMessageDialog(this,
-                        "Passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            System.out.println("📝 Signing up user: " + name + " | Category: " + category + " | Password: " + password);
-            new UserManager().signUpUser(name, category, password);
+
+            System.out.println("📝 Signing up user: " + name + " | Password: " + password);
+
+            new UserManager().signUpUser(name, password);
         });
+
         return createButton;
     }
 }
