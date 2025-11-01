@@ -2,6 +2,7 @@ package org.example.gui.pages;
 
 import org.example.DatabaseManager.UserDatabase.UserManager;
 import org.example.gui.appManager.ThemeManager;
+import org.example.gui.components.RoundingOfPasswordField;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.fonts;
 import org.example.gui.appManager.sizeManager;
@@ -43,14 +44,36 @@ public class signupPage extends JPanel {
         titleLabel.setForeground(themeManager.getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Name Field
         RoundingOfTextfields nameField = new RoundingOfTextfields(20);
         nameField.setMaximumSize(new Dimension(400, 45));
         nameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
         nameField.setForeground(themeManager.getBlack());
         nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
         nameField.setBorderColor(themeManager.getGray());
-        nameField.setPlaceholder("Full Name");
+        nameField.setPlaceholder("Name");
 
+        // Password Field
+        RoundingOfPasswordField passField = new RoundingOfPasswordField(20);
+        passField.setMaximumSize(new Dimension(400, 45));
+        passField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        passField.setForeground(themeManager.getBlack());
+        passField.setBackground(themeManager.getWhite());
+        passField.setBorderColor(themeManager.getGray());
+        passField.setPlaceholder("Password");
+        passField.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Confirm Password Field
+        RoundingOfPasswordField confirmPassField = new RoundingOfPasswordField(20);
+        confirmPassField.setMaximumSize(new Dimension(400, 45));
+        confirmPassField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        confirmPassField.setForeground(themeManager.getBlack());
+        confirmPassField.setBackground(themeManager.getWhite());
+        confirmPassField.setBorderColor(themeManager.getGray());
+        confirmPassField.setPlaceholder("Confirm Password");
+        confirmPassField.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Category Label + Box
         JLabel categoryLabel = new JLabel("Select Category", SwingConstants.CENTER);
         categoryLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
         categoryLabel.setForeground(themeManager.getBlack());
@@ -65,9 +88,11 @@ public class signupPage extends JPanel {
         categoryBox.setAlignmentX(Component.CENTER_ALIGNMENT);
         categoryBox.setFocusable(false);
 
-        JButton createButton = getJButton(nameField, categoryBox);
+        // Create Account Button
+        JButton createButton = getJButton(nameField, passField, confirmPassField, categoryBox);
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Back Button
         RoundingOfButtons backButton = new RoundingOfButtons("Back to Login");
         backButton.setArc(30, 30);
         backButton.setMaximumSize(new Dimension(400, 45));
@@ -81,9 +106,14 @@ public class signupPage extends JPanel {
             cardChanger.accept("LOGIN");
         });
 
+        // Add all components to panel
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(nameField);
+        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
+        formContent.add(passField);
+        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
+        formContent.add(confirmPassField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(categoryLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
@@ -97,7 +127,8 @@ public class signupPage extends JPanel {
         add(formPanel, BorderLayout.CENTER);
     }
 
-    private JButton getJButton(JTextField nameField, JComboBox<String> categoryBox) {
+    // ✅ Updated getJButton method
+    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField, JComboBox<String> categoryBox) {
         ThemeManager themeManager = ThemeManager.getInstance();
 
         RoundingOfButtons createButton = new RoundingOfButtons("Create Account");
@@ -112,18 +143,23 @@ public class signupPage extends JPanel {
 
         createButton.addActionListener(e -> {
             String name = nameField.getText().trim();
+            String password = passField.getText().trim();
+            String confirmPassword = confirmPassField.getText().trim();
             String category = categoryBox.getSelectedItem().toString();
 
-            if (name.isEmpty()) {
+            if (name.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
-                        "Please enter your name.", "Error", JOptionPane.ERROR_MESSAGE);
+                        "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
-            System.out.println("📝 Signing up user: " + name + " | Category: " + category);
-            new UserManager().signUpUser(name, category);
+            if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this,
+                        "Passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            System.out.println("📝 Signing up user: " + name + " | Category: " + category + " | Password: " + password);
+            new UserManager().signUpUser(name, category, password);
         });
-
         return createButton;
     }
 }

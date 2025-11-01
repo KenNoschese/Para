@@ -11,7 +11,7 @@ public class UserManager {
         this.con = DatabaseInstance.getInstance().getConnection();
     }
 
-    public void signUpUser(String name, String category) {
+    public void signUpUser(String name, String category, String password) {
         try (Statement st = con.createStatement()) {
             String table;
             String idColumn;
@@ -40,30 +40,32 @@ public class UserManager {
                 }
             }
 
+            // Insert name into category table
             String insertQuery = String.format("INSERT INTO %s (%s) VALUES ('%s')", table, nameColumn, name);
             st.executeUpdate(insertQuery);
 
+            // Get new ID
             int newId = 0;
             ResultSet rs = st.executeQuery("SELECT MAX(" + idColumn + ") AS maxid FROM " + table);
             if (rs.next()) {
                 newId = rs.getInt("maxid");
             }
             rs.close();
+
             System.out.println("🆔 Retrieved new ID: " + newId);
 
+            // Use user's first name as username
             String firstName = name.split(" ")[0];
             String username = firstName;
-            String password = newId + firstName;
 
+            // 🔐 Use the password the user entered
             st.executeUpdate(String.format("CREATE USER '%s'@'%%' IDENTIFIED BY '%s'", username, password));
             System.out.println("Database user created: " + username);
 
             String grantQuery = String.format("GRANT SELECT ON route_schema.* TO '%s'@'%%'", username);
             st.executeUpdate(grantQuery);
             st.executeUpdate("FLUSH PRIVILEGES");
-            System.out.println("Granted SELECT privileges to " + username + " on route_schema");
 
-            //Confirmation dialog // Basig naa pa kay better alternative ani ken, gi JOption ra nako kay wakoy idea unsaon
             JOptionPane.showMessageDialog(
                     null,
                     "Account Created Successfully!\n\nUsername: " + username + "\nPassword: " + password,
