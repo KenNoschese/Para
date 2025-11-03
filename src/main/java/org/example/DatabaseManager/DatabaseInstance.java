@@ -11,7 +11,7 @@ public class DatabaseInstance {
 
     // Default root credentials (used for admin operations like sign-up)
     private String uname = "root";
-    private String pswd = "1234";
+    private String pswd = "Ken11514!";
 
     // Track currently logged-in app user and category
     private static String currentAppUser;
@@ -85,7 +85,7 @@ public class DatabaseInstance {
      * Default singleton initialization (root by default).
      */
     private DatabaseInstance() {
-        this("root", "1234");
+        this("root", "Ken11514!");
     }
 
     public static synchronized DatabaseInstance getInstance() {

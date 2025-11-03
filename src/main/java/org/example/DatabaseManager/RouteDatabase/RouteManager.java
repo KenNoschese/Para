@@ -8,7 +8,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// For fetching routes, fare & time computation and managing observer updates (boarding/leaving)
+// manages route queries, fare/ETA calculations, and jeepney observer updates.
+
 public class RouteManager {
     private final Connection con;
     private final JeepneySubject jeepneySubject;
@@ -18,8 +19,11 @@ public class RouteManager {
         this.jeepneySubject = new JeepneySubject();
     }
 
+    // observer management
     public void addJeepneyObserver(JeepneyObserver observer) {
-        if (observer != null) jeepneySubject.registerObserver(observer);
+        if (observer != null) {
+            jeepneySubject.registerObserver(observer);
+        }
     }
 
     public void boardJeepney(String plateNumber) throws SQLException {
@@ -35,25 +39,114 @@ public class RouteManager {
     }
 
     public void close() throws SQLException {
-        if (con != null && !con.isClosed()) con.close();
+        if (con != null && !con.isClosed()) {
+            con.close();
+        }
     }
 
-    // =======================================================
-    // === NORMALIZE INPUT (case + whitespace safe) ===
-    // =======================================================
+    // input normalize
     private String normalize(String input) {
         return input == null ? "" : input.trim().toLowerCase();
     }
 
-    // =======================================================
-    // === FIND DIRECT ROUTES (DIRECTION-AWARE) ===
-    // =======================================================
+    // jeepney infos
+    public ArrayList<JeepneyInfo> getJeepneysForRoute(String routeName) throws SQLException {
+        ArrayList<JeepneyInfo> jeepneys = new ArrayList<>();
+        String sql = """
+            SELECT 
+                j.jeepney_id,
+                j.plate_number,
+                j.capacity,
+                j.current_passengers,
+                r.route_id,
+                r.route_name
+            FROM Jeepneys j
+            JOIN Routes r ON j.route_id = r.route_id
+            WHERE LOWER(r.route_name) = ?
+            ORDER BY j.current_passengers ASC;
+            """;
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, normalize(routeName));
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    JeepneyInfo info = new JeepneyInfo(
+                            rs.getInt("jeepney_id"),
+                            rs.getString("plate_number"),
+                            rs.getInt("capacity"),
+                            rs.getInt("current_passengers"),
+                            rs.getInt("route_id"),
+                            rs.getString("route_name")
+                    );
+                    jeepneys.add(info);
+                }
+            }
+        }
+        return jeepneys;
+    }
+
+    public int getJeepneyCountForRoute(String routeName) throws SQLException {
+        String sql = """
+            SELECT COUNT(*) AS count
+            FROM Jeepneys j
+            JOIN Routes r ON j.route_id = r.route_id
+            WHERE LOWER(r.route_name) = ?
+            """;
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, normalize(routeName));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() ? rs.getInt("count") : 0;
+            }
+        }
+    }
+
+    // jeepney info inner class
+    public static class JeepneyInfo {
+        private final int jeepneyId;
+        private final String plateNumber;
+        private final int capacity;
+        private final int currentPassengers;
+        private final int routeId;
+        private final String routeName;
+
+        public JeepneyInfo(int jeepneyId, String plateNumber, int capacity,
+                           int currentPassengers, int routeId, String routeName) {
+            this.jeepneyId = jeepneyId;
+            this.plateNumber = plateNumber;
+            this.capacity = capacity;
+            this.currentPassengers = currentPassengers;
+            this.routeId = routeId;
+            this.routeName = routeName;
+        }
+
+        public int getJeepneyId() { return jeepneyId; }
+        public String getPlateNumber() { return plateNumber; }
+        public int getCapacity() { return capacity; }
+        public int getCurrentPassengers() { return currentPassengers; }
+        public int getRouteId() { return routeId; }
+        public String getRouteName() { return routeName; }
+
+        public int getAvailableSeats() {
+            return capacity - currentPassengers;
+        }
+
+        public boolean isFull() {
+            return currentPassengers >= capacity;
+        }
+
+        public double getOccupancyPercentage() {
+            return capacity > 0 ? (currentPassengers * 100.0) / capacity : 0.0;
+        }
+    }
+
+    // direct routes with direction
     public ArrayList<RouteData> findRoutes(String from, String to, String category) throws SQLException {
         from = normalize(from);
         to = normalize(to);
         ArrayList<RouteData> routes = new ArrayList<>();
 
-        // Detect direction: true = outbound (from → to increasing), false = inbound
+        // true = outbound (from - to increasing), false = inbound
         boolean isOutbound = detectDirection(from, to);
 
         String sql = """
@@ -86,7 +179,7 @@ public class RouteManager {
               (? = FALSE AND rs_from.stop_order > rs_to.stop_order)
           )
         GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order
-        ORDER BY stops ASC, route_id ASC;  -- FIXED: Prefer shortest (few stops first)
+        ORDER BY stops ASC, route_id ASC;
         """;
 
         try (PreparedStatement pst = con.prepareStatement(sql)) {
@@ -135,9 +228,7 @@ public class RouteManager {
         return routes;
     }
 
-    // =======================================================
-    // === DIRECTION DETECTION (ROBUST) ===
-    // =======================================================
+    // direction detector
     private boolean detectDirection(String from, String to) {
         String query = """
             SELECT (rs_from.stop_order < rs_to.stop_order) AS is_outbound
@@ -163,9 +254,7 @@ public class RouteManager {
         return true; // default to outbound
     }
 
-    // =======================================================
-    // === STOPS FETCHER (DIRECTION-AWARE) ===
-    // =======================================================
+    // gets stops for routes with direction
     private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to) throws SQLException {
         from = normalize(from);
         to = normalize(to);
@@ -231,21 +320,19 @@ public class RouteManager {
         };
     }
 
-    // =======================================================
-    // === FIND ROUTES WITH TRANSFERS (VALIDATED BY findRoutes()) ===
-    // =======================================================
+    // find routes with transfer which is vaidated by findroutes
     public ArrayList<ArrayList<RouteData>> findRoutesWithTransfers(String from, String to, String category) throws SQLException {
         from = normalize(from);
         to = normalize(to);
         ArrayList<ArrayList<RouteData>> allRoutes = new ArrayList<>();
 
-        // 1. Direct routes
+        // direct routes
         ArrayList<RouteData> directRoutes = findRoutes(from, to, category);
         for (RouteData d : directRoutes) {
             allRoutes.add(new ArrayList<>(List.of(d)));
         }
 
-        // 2. Transfer routes — validated by findRoutes()
+        // transfer routes — validated by findRoutes()
         String sql = """
             SELECT DISTINCT
                 tp.from_route_id,
@@ -301,9 +388,7 @@ public class RouteManager {
         return allRoutes;
     }
 
-    // =======================================================
-    // === MAIN TEST METHOD — FULL DEBUG OUTPUT ===
-    // =======================================================
+    // for debug things
     public static void main(String[] args) {
         RouteManager routeManager = null;
         try {
@@ -339,7 +424,7 @@ public class RouteManager {
 
                 if (route.size() == 1) {
                     RouteData r = route.get(0);
-                    System.out.printf("  Direct: %s,s%n", r.getRoute());
+                    System.out.printf("  Direct: %s%n", r.getRoute());
                     System.out.printf("  Stops: %s%n", String.join(" -> ", r.getRouteStops()));
                     System.out.printf("  Fare: ₱%.2f | ETA: %d min | Stops: %d%n", r.getFare(), r.getEta(), r.getStops());
                     totalFare = r.getFare();

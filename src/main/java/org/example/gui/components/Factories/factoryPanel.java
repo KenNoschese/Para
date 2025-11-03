@@ -1,24 +1,20 @@
 package org.example.gui.components.Factories;
 
 import org.example.DatabaseManager.DatabaseInstance;
-import org.example.gui.appManager.ThemeManager;
-import org.example.gui.appManager.sizeManager;
+import org.example.DatabaseManager.RouteDatabase.RouteManager;
+import org.example.gui.appManager.*;
 import org.example.gui.config.AnimationConfig;
-import org.example.gui.resources.Images;
+import org.example.gui.pages.mainPageManager;
+import org.example.gui.resources.*;
 import org.example.DatabaseManager.RouteDatabase.RouteData;
-import org.example.gui.resources.fonts;
 import org.example.gui.appManager.darkModeToggle;
-import org.example.gui.components.RoundingOfPanels;
-import org.example.gui.components.RoundingOfButtons;
-import org.example.gui.components.RoundingOfTextfields;
+import org.example.gui.components.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
@@ -43,16 +39,16 @@ public class factoryPanel {
     public static RoundingOfButtons createUserButton() throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
 
-        // Get current app user
+        // get current app user
         String username = DatabaseInstance.getCurrentAppUser();
         if (username == null || username.isEmpty()) {
             username = "Guest";
         }
 
-        // Final copy for inner class
+        // final copy for inner class
         final String displayName = username;
 
-        // Create button
+        // create button
         RoundingOfButtons userButton = new RoundingOfButtons(displayName);
         userButton.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         userButton.setFocusPainted(false);
@@ -63,7 +59,7 @@ public class factoryPanel {
         userButton.setBounds(15, 10, 220, 30);
         userButton.setHorizontalAlignment(SwingConstants.LEFT);
 
-        // Hover + Click
+        // hover + click
         userButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -113,7 +109,6 @@ public class factoryPanel {
             private Timer timer;
             private int x = 0;
             private boolean isPaused = false;
-            private JButton userButton;
 
             {
                 themeManager.addThemeChangeListener(isDarkMode -> {
@@ -203,48 +198,117 @@ public class factoryPanel {
         return headerPanel;
     }
 
-    public static JPanel createRoutePanel(RouteData routeData, Consumer<RouteData> onClick) throws IOException, FontFormatException {
+    public static JPanel createRoutePanel(RouteData routeData, Consumer<RouteData> onClick, mainPageManager routeManager) throws IOException, FontFormatException, SQLException {
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
+        RouteManager manager = new RouteManager();
 
         RoundingOfPanels routePanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
-        routePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        routePanel.setLayout(new BorderLayout(15, 10));
         routePanel.setBackground(defaultColor);
         routePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         routePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
         routePanel.setOpaque(true);
 
+        // Main info panel (left side)
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setOpaque(false);
+
         JLabel routeTitle = new JLabel(routeData.getRoute());
         routeTitle.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16));
         routeTitle.setForeground(themeManager.getBlack());
-        routePanel.add(routeTitle);
-        routePanel.add(Box.createHorizontalStrut(30));
+        routeTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.add(routeTitle);
+        infoPanel.add(Box.createVerticalStrut(5));
 
         JLabel detailsLabel = new JLabel(String.format(
                 "<html><b>Details:</b> %s</html>", routeData.getDetails()
         ));
         detailsLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
         detailsLabel.setForeground(themeManager.getBlack());
-        routePanel.add(detailsLabel);
+        detailsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.add(detailsLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
 
         JLabel infoLabel = new JLabel(String.format(
-                "<html><b>Transfers:</b> %d <b>| Stops: </b>%d <b>| ETA:</b> %s</html>",
+                "<html><b>Transfers:</b> %d <b>| Stops:</b> %d <b>| ETA:</b> %s min</html>",
                 routeData.getTransfers(),
                 routeData.getStops(),
                 routeData.getEta()
         ));
         infoLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         infoLabel.setForeground(themeManager.getForegroundColor());
-        routePanel.add(infoLabel);
-        routePanel.add(Box.createHorizontalStrut(30));
+        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.add(infoLabel);
 
         JLabel fareLabel = new JLabel(String.format("Php %.2f", routeData.getFare()));
         fareLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14));
         fareLabel.setForeground(themeManager.getBlack());
-        routePanel.add(fareLabel);
+        fareLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        infoPanel.add(fareLabel);
 
-        routePanel.add(Box.createVerticalStrut(8));
+        // Jeepney info panel (right side)
+        JPanel jeepneyPanel = new JPanel();
+        jeepneyPanel.setLayout(new BoxLayout(jeepneyPanel, BoxLayout.Y_AXIS));
+        jeepneyPanel.setOpaque(false);
+        jeepneyPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+
+        try {
+            ArrayList<RouteManager.JeepneyInfo> jeepneys = manager.getJeepneysForRoute(routeData.getRoute());
+
+            if (!jeepneys.isEmpty()) {
+                JLabel jeepneyHeader = new JLabel("Available Jeepneys:");
+                jeepneyHeader.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 12));
+                jeepneyHeader.setForeground(themeManager.getBlack());
+                jeepneyPanel.add(jeepneyHeader);
+                jeepneyPanel.add(Box.createVerticalStrut(5));
+
+                // Show first 3 jeepneys only to save space
+                int count = Math.min(3, jeepneys.size());
+                for (int i = 0; i < count; i++) {
+                    RouteManager.JeepneyInfo jeep = jeepneys.get(i);
+
+                    String status = jeep.isFull() ? " [FULL]" :
+                            jeep.getAvailableSeats() <= 5 ? " [Almost Full]" : "";
+                    Color statusColor = jeep.isFull() ? Color.RED :
+                            jeep.getAvailableSeats() <= 5 ? Color.ORANGE :
+                                    themeManager.getGreen();
+
+                    JLabel jeepLabel = new JLabel(String.format(
+                            "<html>%s: <b>%d/%d</b>%s</html>",
+                            jeep.getPlateNumber(),
+                            jeep.getCurrentPassengers(),
+                            jeep.getCapacity(),
+                            status
+                    ));
+                    jeepLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 11));
+                    jeepLabel.setForeground(statusColor);
+                    jeepneyPanel.add(jeepLabel);
+                }
+
+                if (jeepneys.size() > 3) {
+                    JLabel moreLabel = new JLabel("+" + (jeepneys.size() - 3) + " more");
+                    moreLabel.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 10));
+                    moreLabel.setForeground(themeManager.getGray());
+                    jeepneyPanel.add(moreLabel);
+                }
+            } else {
+                JLabel noJeepneys = new JLabel("No jeepneys available");
+                noJeepneys.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 11));
+                noJeepneys.setForeground(themeManager.getGray());
+                jeepneyPanel.add(noJeepneys);
+            }
+        } catch (Exception e) {
+            JLabel errorLabel = new JLabel("Error loading jeepneys");
+            errorLabel.setFont(loadCustomFont(fonts.DM_SANS_ITALIC, 11));
+            errorLabel.setForeground(Color.RED);
+            jeepneyPanel.add(errorLabel);
+        }
+
+        routePanel.add(infoPanel, BorderLayout.WEST);
+        routePanel.add(jeepneyPanel, BorderLayout.EAST);
 
         Color hoverColor = themeManager.getYellow().brighter();
 

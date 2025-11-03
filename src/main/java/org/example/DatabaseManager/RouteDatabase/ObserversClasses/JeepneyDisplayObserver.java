@@ -1,8 +1,7 @@
 package org.example.DatabaseManager.RouteDatabase.ObserversClasses;
 
-/**
- * A concrete observer that prints jeepney updates to the console.
- */
+//a concrete observer that prints jeepney updates to the console
+
 public class JeepneyDisplayObserver implements JeepneyObserver {
     private final String observerName;
 
