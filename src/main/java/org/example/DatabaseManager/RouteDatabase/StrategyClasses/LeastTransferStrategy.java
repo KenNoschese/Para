@@ -1,19 +1,23 @@
 package org.example.DatabaseManager.RouteDatabase.StrategyClasses;
 
-import org.example.DatabaseManager.RouteDatabase.RouteData;
-import java.util.*;
+import org.example.DatabaseManager.RouteDatabase.RouteComponent;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Optional;
 
 public class LeastTransferStrategy implements RouteStrategy {
+
     @Override
-    public Optional<RouteData> findBestRoute(ArrayList<RouteData> routes) {
-        return routes.stream().min(Comparator.comparingInt(RouteData::getStops));
+    public Optional<RouteComponent> findBestRoute(ArrayList<RouteComponent> routes) {
+        return routes.stream()
+                .min(Comparator.comparingInt(RouteComponent::getTransfers)
+                        .thenComparingInt(RouteComponent::getStops));
     }
 
     @Override
-    public Optional<ArrayList<RouteData>> findBestTransferRoute(ArrayList<ArrayList<RouteData>> transferRoutes) {
+    public Optional<RouteComponent> findBestTransferRoute(ArrayList<RouteComponent> transferRoutes) {
         return transferRoutes.stream()
-                .min(Comparator.comparingDouble(routeList ->
-                        routeList.stream().mapToDouble(RouteData::getStops).sum()));
+                .min(Comparator.comparingInt(RouteComponent::getTransfers)
+                        .thenComparingInt(RouteComponent::getStops));
     }
 }
-

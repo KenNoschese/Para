@@ -3,21 +3,32 @@ package org.example.DatabaseManager;
 import java.sql.*;
 
 public class DatabaseInstance {
-    private static DatabaseInstance instance;
+
+    /* ============================================================== */
+    /* ====================== SINGLETON FIELDS ====================== */
+    /* ============================================================== */
+
+    private static volatile DatabaseInstance instance;   // volatile for thread-safety
     private Connection connection;
     private Statement statement;
 
-    private final String db = "route_schema";
+    private final String db = "para_schema";
 
-    // Default root credentials (used for admin operations like sign-up)
+    // Default root credentials (admin)
     private String uname = "root";
-    private String pswd = "Ken11514!";
+    private String pswd = "akosiestre";
 
-    // Track currently logged-in app user and category
+    // Currently logged-in app user / category
     private static String currentAppUser;
     private static String currentAppCategory;
 
-    // ===================== USER TRACKING =====================
+    private static final String JDBC_URL =
+            "jdbc:mysql://127.0.0.1:3306/" + "para_schema" + "?serverTimezone=UTC";
+
+    /* ============================================================== */
+    /* ====================== USER TRACKING ======================== */
+    /* ============================================================== */
+
     public static void setLoggedInUser(String username, String category) {
         currentAppUser = username;
         currentAppCategory = category;
@@ -31,125 +42,138 @@ public class DatabaseInstance {
         return currentAppCategory;
     }
 
-    // ===================== CONNECTION MANAGEMENT =====================
+    /* ============================================================== */
+    /* ====================== CONNECTION MANAGEMENT ================ */
+    /* ============================================================== */
 
     /**
-     * Connect to the database as a specific user (non-root).
+     * Connect (or reconnect) as a **specific** MySQL user.
      */
-    public void connectAsUser(String username, String password) {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
+    private void connectAsUser(String username, String password) throws SQLException {
+        closeCurrentConnection();   // clean any previous connection
 
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://127.0.0.1:3306/" + db + "?serverTimezone=UTC",
-                    username, password
-            );
-            statement = connection.createStatement();
+        connection = DriverManager.getConnection(JDBC_URL, username, password);
+        statement = connection.createStatement();
 
-            this.uname = username;
-            this.pswd = password;
-            setLoggedInUser(username, null);
+        this.uname = username;
+        this.pswd = password;
+        setLoggedInUser(username, null);
 
-            System.out.println("✅ Connected to database as user: " + username);
-        } catch (SQLException e) {
-            System.out.println("❌ Failed to connect as user: " + e.getMessage());
-        }
+        System.out.println("Connected to database as user: " + username);
     }
 
     /**
-     * Default constructor — connects as root (admin).
+     * Ensure the current connection is alive.
+     * If it is closed or invalid, a fresh connection is opened with the
+     * **same credentials** that were used the last time.
      */
-    private DatabaseInstance(String uname, String pswd) {
-        try {
-            this.uname = uname;
-            this.pswd = pswd;
-
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(
-                    "jdbc:mysql://127.0.0.1:3306/" + db + "?serverTimezone=UTC",
-                    uname, pswd
-            );
-            statement = connection.createStatement();
-
-            System.out.println("✅ Connected to database as: " + uname);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+    private synchronized void ensureConnection() throws SQLException {
+        if (connection != null && connection.isValid(1)) {
+            return;   // still good
         }
+
+        // Connection is dead -> reconnect with the *current* credentials
+        closeCurrentConnection();
+        connection = DriverManager.getConnection(JDBC_URL, uname, pswd);
+        statement = connection.createStatement();
+        System.out.println("Re-connected to database as: " + uname);
     }
 
-    /**
-     * Default singleton initialization (root by default).
-     */
+    /** Close the current connection & statement safely. */
+    private void closeCurrentConnection() {
+        try { if (statement != null) statement.close(); } catch (SQLException ignored) {}
+        try { if (connection != null) connection.close(); } catch (SQLException ignored) {}
+        statement = null;
+        connection = null;
+    }
+
+    /* ============================================================== */
+    /* ====================== PUBLIC API ============================ */
+    /* ============================================================== */
+
     private DatabaseInstance() {
-        this("root", "Ken11514!");
+        // private -> forces use of getInstance()
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            ensureConnection();                 // opens root connection
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialise DB singleton", e);
+        }
     }
 
-    public static synchronized DatabaseInstance getInstance() {
+    /** Thread-safe lazy singleton. */
+    public static DatabaseInstance getInstance() {
         if (instance == null) {
-            instance = new DatabaseInstance();
+            synchronized (DatabaseInstance.class) {
+                if (instance == null) {
+                    instance = new DatabaseInstance();
+                }
+            }
         }
         return instance;
     }
 
-    // ===================== LOGIN HANDLING =====================
-
     /**
-     * Verify credentials from UserAccounts table, then reconnect as that user.
+     * Return a **live** connection.
+     * Callers should *always* use try-with-resources when they need a
+     * PreparedStatement / ResultSet.
      */
-    public static boolean loginAsUser(String username, String password) {
-        try (Connection con = getInstance().getConnection();
-             PreparedStatement ps = con.prepareStatement(
-                     "SELECT username, password FROM UserAccounts WHERE username = ?")) {
-
-            ps.setString(1, username);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                String storedPass = rs.getString("password");
-
-                if (storedPass.equals(password)) {
-                    System.out.println("✅ User verified: " + username);
-
-                    // Switch DB connection from root → user
-                    getInstance().connectAsUser(username, password);
-                    return true;
-                } else {
-                    System.out.println("❌ Invalid password for user: " + username);
-                }
-            } else {
-                System.out.println("❌ User not found: " + username);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("SQL Error during login: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Unexpected error during login: " + e.getMessage());
-        }
-
-        return false;
-    }
-
-    // ===================== UTILITY =====================
-
     public Connection getConnection() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not obtain a valid DB connection", e);
+        }
         return connection;
     }
 
     public Statement getStatement() {
+        try {
+            ensureConnection();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not obtain a valid DB statement", e);
+        }
         return statement;
     }
 
-    public void close() {
+    /** Switch the DB session to a different MySQL user (after login). */
+    public void switchToUser(String username, String password) {
         try {
-            if (statement != null) statement.close();
-            if (connection != null) connection.close();
-            instance = null;
+            connectAsUser(username, password);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to switch DB user", e);
+        }
+    }
+
+    /** Login helper – verifies credentials and switches connection. */
+    public static boolean loginAsUser(String username, String password) {
+        DatabaseInstance db = getInstance();
+
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT username, password FROM UserAccounts WHERE username = ?")) {
+
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getString("password").equals(password)) {
+                    db.switchToUser(username, password);
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL error during login: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /* ============================================================== */
+    /* ====================== CLEANUP =============================== */
+    /* ============================================================== */
+
+    public void close() {
+        closeCurrentConnection();
+        synchronized (DatabaseInstance.class) {
+            instance = null;
         }
     }
 

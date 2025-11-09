@@ -1,5 +1,6 @@
 package org.example.gui.pages;
 
+import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
 import org.example.gui.appManager.ThemeManager;
@@ -13,6 +14,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
@@ -113,6 +115,7 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
 
     private void handleBoardButton(RoundingOfButtons button) {
         String plateNumber = plateField.getText().trim();
+        Connection conn = DatabaseInstance.getInstance().getConnection();
 
         if (plateNumber.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter a plate number first.");
@@ -121,12 +124,12 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
 
         try {
             if (!inJeep) {
-                routeManager.boardJeepney(plateNumber);
+                routeManager.boardJeepney(plateNumber, conn);
                 button.setText("🏁 Leave Jeep");
                 button.setBackground(themeManager.getBlue());
                 inJeep = true;
             } else {
-                routeManager.leaveJeepney(plateNumber);
+                routeManager.leaveJeepney(plateNumber, conn);
                 button.setText("🚐 Board Jeep");
                 button.setBackground(themeManager.getGreen());
                 inJeep = false;

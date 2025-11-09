@@ -2,22 +2,35 @@ package org.example.gui.pages;
 
 import org.example.DatabaseManager.RouteDatabase.NavigationFacade;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
-import org.example.DatabaseManager.RouteDatabase.RouteData;
+import org.example.DatabaseManager.RouteDatabase.RouteComponent;
+import org.example.DatabaseManager.RouteDatabase.Routes;
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
 import org.example.DatabaseManager.DatabaseInstance;
 
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 public class mainPageManager {
-    private final RouteManager routeManager;
-    private final NavigationFacade navigationFacade;
-    private final ArrayList<ArrayList<RouteData>> savedRoutes;
+
+    // ──────────────────────────────────────────────────────────────
+    // SAFE DB READERS – ALREADY IN YOUR CODE (KEEP THEM)
+    // ──────────────────────────────────────────────────────────────
+    private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
+        Object obj = rs.getObject(column);
+        if (obj == null) return 0.0;
+        return ((Number) obj).doubleValue();   // works for Integer, Long, Double, BigDecimal
+    }
+
+    private static int getIntSafe(ResultSet rs, String column) throws SQLException {
+        Object obj = rs.getObject(column);
+        if (obj == null) return 0;
+        return ((Number) obj).intValue();
+    }
+
+    private final ArrayList<RouteComponent> savedRoutes;
     private String currentFilter = "all";
 
-    public mainPageManager() throws SQLException {
-        this.routeManager = new RouteManager();
-        this.navigationFacade = new NavigationFacade();
+    public mainPageManager() {
         this.savedRoutes = new ArrayList<>();
     }
 
@@ -27,58 +40,79 @@ public class mainPageManager {
         }
 
         String category = getUserCategory();
+        Connection conn = DatabaseInstance.getInstance().getConnection();
 
         if (currentFilter.equals("all")) {
-            return searchAllRoutes(from, to, category);
+            return searchAllRoutes(from, to, category, conn);
         } else {
-            return searchFilteredRoutes(from, to, category);
+            return searchFilteredRoutes(from, to, category, conn);
         }
     }
 
-    private SearchResult searchAllRoutes(String from, String to, String category) throws SQLException {
-        ArrayList<ArrayList<RouteData>> allPossible = routeManager.findRoutesWithTransfers(from, to, category);
+    // ──────────────────────────────────────────────────────────────
+    // FIXED: searchAllRoutes — now uses RouteManager with safe DB reads
+    // ──────────────────────────────────────────────────────────────
+    private SearchResult searchAllRoutes(String from, String to, String category, Connection conn) throws SQLException {
+        RouteManager routeManager = new RouteManager();
+        ArrayList<RouteComponent> allPossible = routeManager.findRoutesWithTransfers(from, to, category, conn);
         allPossible = removeDuplicateRouteOptions(allPossible);
 
         if (allPossible.isEmpty()) {
             return SearchResult.empty("No routes found from " + from + " to " + to);
         }
 
-        ArrayList<RouteData> firstRoute = allPossible.get(0);
-        return new SearchResult(allPossible, firstRoute, true);
+        RouteComponent firstRoute = allPossible.get(0);
+        ArrayList<RouteComponent> defaultSegments = getSegments(firstRoute);
+        return new SearchResult(allPossible, defaultSegments, true);
     }
 
-    private SearchResult searchFilteredRoutes(String from, String to, String category) throws SQLException {
-        ArrayList<RouteData> bestFullRoute = navigationFacade.findBestRoute(from, to, category, currentFilter);
+    // ──────────────────────────────────────────────────────────────
+    // FIXED: searchFilteredRoutes — now uses safe DB reads inside NavigationFacade
+    // ──────────────────────────────────────────────────────────────
+    private SearchResult searchFilteredRoutes(String from, String to, String category, Connection conn) throws SQLException {
+        NavigationFacade navigationFacade = new NavigationFacade();
+        ArrayList<RouteComponent> bestFullRoute = navigationFacade.findBestRoute(from, to, category, currentFilter, conn);
 
         if (bestFullRoute == null || bestFullRoute.isEmpty()) {
             return SearchResult.empty("No routes found for the selected filter.");
         }
 
-        ArrayList<ArrayList<RouteData>> single = new ArrayList<>();
-        single.add(bestFullRoute);
+        ArrayList<RouteComponent> single = new ArrayList<>();
+        single.add(wrapInComposite(bestFullRoute));
         return new SearchResult(single, bestFullRoute, true);
     }
 
     private String getUserCategory() {
         String category = "Student";
-        try {
-            DatabaseInstance db = DatabaseInstance.getInstance();
-            String pswd = db.getActivePassword();
-            if (pswd != null && !pswd.isEmpty()) {
-                char first = pswd.charAt(0);
-                if (first == '1') category = "Regular";
-                else if (first == '2') category = "Student";
-                else if (first == '3') category = "PWD";
-                else if (first == '4') category = "Senior Citizen";
+        String query = "SELECT password FROM ActiveSession LIMIT 1";
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                String pswd = rs.getString("password");
+                if (pswd != null && !pswd.isEmpty()) {
+                    char first = pswd.charAt(0);
+                    category = switch (first) {
+                        case '1' -> "Regular";
+                        case '2' -> "Student";
+                        case '3' -> "PWD";
+                        case '4' -> "Senior Citizen";
+                        default -> "Student";
+                    };
+                }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Fallback
+        }
         return category;
     }
 
-    public boolean addSavedRoute(ArrayList<RouteData> route) {
-        if (route == null || route.isEmpty()) return false;
+    public boolean addSavedRoute(RouteComponent route) {
+        if (route == null) return false;
 
-        for (ArrayList<RouteData> existing : savedRoutes) {
+        for (RouteComponent existing : savedRoutes) {
             if (isSameRoute(existing, route)) {
                 return false;
             }
@@ -88,11 +122,11 @@ public class mainPageManager {
         return true;
     }
 
-    public void removeSavedRoute(ArrayList<RouteData> route) {
+    public void removeSavedRoute(RouteComponent route) {
         savedRoutes.remove(route);
     }
 
-    public ArrayList<ArrayList<RouteData>> getSavedRoutes() {
+    public ArrayList<RouteComponent> getSavedRoutes() {
         return new ArrayList<>(savedRoutes);
     }
 
@@ -100,14 +134,17 @@ public class mainPageManager {
         savedRoutes.clear();
     }
 
-    private boolean isSameRoute(ArrayList<RouteData> r1, ArrayList<RouteData> r2) {
-        if (r1.size() != r2.size()) return false;
-        for (int i = 0; i < r1.size(); i++) {
-            RouteData seg1 = r1.get(i);
-            RouteData seg2 = r2.get(i);
-            if (!seg1.getRoute().equals(seg2.getRoute()) ||
-                    !seg1.getFromLocation().equals(seg2.getFromLocation()) ||
-                    !seg1.getDestination().equals(seg2.getDestination())) {
+    private boolean isSameRoute(RouteComponent r1, RouteComponent r2) {
+        List<RouteComponent> segs1 = getSegments(r1);
+        List<RouteComponent> segs2 = getSegments(r2);
+        if (segs1.size() != segs2.size()) return false;
+
+        for (int i = 0; i < segs1.size(); i++) {
+            RouteComponent s1 = segs1.get(i);
+            RouteComponent s2 = segs2.get(i);
+            if (!s1.getRoute().equals(s2.getRoute()) ||
+                    !s1.getFromLocation().equals(s2.getFromLocation()) ||
+                    !s1.getDestination().equals(s2.getDestination())) {
                 return false;
             }
         }
@@ -122,58 +159,52 @@ public class mainPageManager {
         return currentFilter;
     }
 
-    public RouteDetails calculateTransferMetrics(ArrayList<RouteData> transfer) {
-        if (transfer == null || transfer.isEmpty()) {
+    public RouteDetails calculateTransferMetrics(RouteComponent route) {
+        if (route == null) {
             return new RouteDetails(0, 0, 0.0, 0);
         }
 
-        int totalETA = 0;
-        int totalStops = 0;
-        double totalFare = 0.0;
-        int transfers = transfer.size() - 1;
-
-        for (RouteData r : transfer) {
-            totalETA += r.getEta();
-            totalStops += r.getStops();
-            totalFare += r.getFare();
-        }
-
-        return new RouteDetails(totalETA, totalStops, totalFare, transfers);
+        int transfers = route.getTransfers();
+        return new RouteDetails(route.getEta(), route.getStops(), route.getFare(), transfers);
     }
 
     public RouteStrategy getStrategyForPriority(String priority) {
-        switch (priority.toLowerCase()) {
-            case "distance":
-                return new ShortestDistanceStrategy();
-            case "time":
-            case "eta":
-                return new ShortestTimeStrategy();
-            case "transfers":
-            case "stops":
-                return new LeastTransferStrategy();
-            case "fare":
-                return new CheapestFareStrategy();
-            default:
-                return new ShortestTimeStrategy();
-        }
+        return switch (priority.toLowerCase()) {
+            case "distance" -> new ShortestDistanceStrategy();
+            case "time", "eta" -> new ShortestTimeStrategy();
+            case "transfers", "stops" -> new LeastTransferStrategy();
+            case "fare" -> new CheapestFareStrategy();
+            default -> new ShortestTimeStrategy();
+        };
     }
 
-    private ArrayList<ArrayList<RouteData>> removeDuplicateRouteOptions(ArrayList<ArrayList<RouteData>> list) {
+    private ArrayList<RouteComponent> removeDuplicateRouteOptions(ArrayList<RouteComponent> list) {
         Set<String> seen = new HashSet<>();
-        ArrayList<ArrayList<RouteData>> uniq = new ArrayList<>();
+        ArrayList<RouteComponent> uniq = new ArrayList<>();
 
-        for (ArrayList<RouteData> route : list) {
-            StringBuilder key = new StringBuilder();
-            for (RouteData seg : route) {
-                key.append(seg.getRoute()).append("→")
-                        .append(seg.getFromLocation()).append("→")
-                        .append(seg.getDestination()).append(";");
-            }
-            if (seen.add(key.toString())) {
+        for (RouteComponent route : list) {
+            String key = route.getFromLocation() + "→" + route.getDestination() + "→" +
+                    route.getRoute() + "→" + route.getTransfers();
+            if (seen.add(key)) {
                 uniq.add(route);
             }
         }
         return uniq;
+    }
+
+    public List<String> getAllStopNames() throws SQLException {
+        List<String> stops = new ArrayList<>();
+        String query = "SELECT stop_name FROM Stops ORDER BY stop_name";
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                stops.add(rs.getString("stop_name"));
+            }
+        }
+        return stops;
     }
 
     public boolean validateInput(String from, String to) {
@@ -181,14 +212,31 @@ public class mainPageManager {
                 to != null && !to.trim().isEmpty();
     }
 
+    // === Helper: Extract segments from RouteComponent ===
+    private ArrayList<RouteComponent> getSegments(RouteComponent route) {
+        if (route instanceof Routes composite) {
+            return new ArrayList<>(composite.getSegments());
+        } else {
+            return new ArrayList<>(java.util.List.of(route));
+        }
+    }
+
+    private RouteComponent wrapInComposite(List<RouteComponent> segments) {
+        if (segments.isEmpty()) return null;
+        Routes composite = new Routes(segments.get(0).getFromLocation() + " to " + segments.get(segments.size()-1).getDestination());
+        segments.forEach(composite::addSegment);
+        return composite;
+    }
+
+    // === INNER CLASSES (unchanged) ===
     public static class SearchResult {
-        private final ArrayList<ArrayList<RouteData>> allRoutes;
-        private final ArrayList<RouteData> defaultRoute;
+        private final ArrayList<RouteComponent> allRoutes;
+        private final ArrayList<RouteComponent> defaultRoute;
         private final boolean success;
         private final String message;
 
-        public SearchResult(ArrayList<ArrayList<RouteData>> allRoutes,
-                            ArrayList<RouteData> defaultRoute,
+        public SearchResult(ArrayList<RouteComponent> allRoutes,
+                            ArrayList<RouteComponent> defaultRoute,
                             boolean success) {
             this.allRoutes = allRoutes;
             this.defaultRoute = defaultRoute;
@@ -207,29 +255,12 @@ public class mainPageManager {
             return new SearchResult(message);
         }
 
-        public ArrayList<ArrayList<RouteData>> getAllRoutes() {
-            return allRoutes;
-        }
-
-        public ArrayList<RouteData> getDefaultRoute() {
-            return defaultRoute;
-        }
-
-        public boolean isSuccess() {
-            return success;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public boolean isTransferRoute() {
-            return defaultRoute != null && defaultRoute.size() > 1;
-        }
-
-        public boolean isDirect() {
-            return defaultRoute != null && defaultRoute.size() == 1;
-        }
+        public ArrayList<RouteComponent> getAllRoutes() { return allRoutes; }
+        public ArrayList<RouteComponent> getDefaultRoute() { return defaultRoute; }
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public boolean isTransferRoute() { return defaultRoute != null && defaultRoute.size() > 1; }
+        public boolean isDirect() { return defaultRoute != null && defaultRoute.size() == 1; }
     }
 
     public static class RouteDetails {
@@ -245,24 +276,10 @@ public class mainPageManager {
             this.transfers = transfers;
         }
 
-        public int getTotalETA() {
-            return totalETA;
-        }
-
-        public int getTotalStops() {
-            return totalStops;
-        }
-
-        public double getTotalFare() {
-            return totalFare;
-        }
-
-        public int getTransfers() {
-            return transfers;
-        }
-
-        public int getSegments() {
-            return transfers + 1;
-        }
+        public int getTotalETA() { return totalETA; }
+        public int getTotalStops() { return totalStops; }
+        public double getTotalFare() { return totalFare; }
+        public int getTransfers() { return transfers; }
+        public int getSegments() { return transfers + 1; }
     }
 }

@@ -27,7 +27,7 @@ public class JeepneySubject {
         }
     }
 
-    public void boardJeepney(String plateNumber) throws SQLException {
+    public void boardJeepney(String plateNumber, Connection conn) throws SQLException {
         String updateSql = "UPDATE Jeepneys SET current_passengers = current_passengers + 1 WHERE plate_number = ?";
         try (PreparedStatement pst = con.prepareStatement(updateSql)) {
             pst.setString(1, plateNumber);
@@ -36,7 +36,7 @@ public class JeepneySubject {
         notifyChange(plateNumber);
     }
 
-    public void leaveJeepney(String plateNumber) throws SQLException {
+    public void leaveJeepney(String plateNumber, Connection conn) throws SQLException {
         String updateSql = "UPDATE Jeepneys SET current_passengers = GREATEST(current_passengers - 1, 0) WHERE plate_number = ?";
         try (PreparedStatement pst = con.prepareStatement(updateSql)) {
             pst.setString(1, plateNumber);
@@ -59,7 +59,7 @@ public class JeepneySubject {
         }
     }
 
-    public void showAllJeepneys() throws SQLException {
+    public void showAllJeepneys(Connection conn) throws SQLException {
         String query = "SELECT plate_number, route_id, current_passengers, capacity FROM Jeepneys";
         try (PreparedStatement pst = con.prepareStatement(query);
              ResultSet rs = pst.executeQuery()) {

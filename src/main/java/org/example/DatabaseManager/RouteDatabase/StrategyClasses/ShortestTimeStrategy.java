@@ -1,20 +1,21 @@
 package org.example.DatabaseManager.RouteDatabase.StrategyClasses;
 
-import org.example.DatabaseManager.RouteDatabase.RouteData;
+import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Optional;
 
 public class ShortestTimeStrategy implements RouteStrategy {
+
     @Override
-    public Optional<RouteData> findBestRoute(ArrayList<RouteData> routes) {
-        return routes.stream().min(Comparator.comparingInt(RouteData::getEta));
+    public Optional<RouteComponent> findBestRoute(ArrayList<RouteComponent> routes) {
+        return routes.stream()
+                .min(Comparator.comparingInt(RouteComponent::getEta));
     }
 
     @Override
-    public Optional<ArrayList<RouteData>> findBestTransferRoute(ArrayList<ArrayList<RouteData>> transferRoutes) {
+    public Optional<RouteComponent> findBestTransferRoute(ArrayList<RouteComponent> transferRoutes) {
         return transferRoutes.stream()
-                .min(Comparator.comparingDouble(routeList ->
-                        routeList.stream().mapToDouble(RouteData::getEta).sum()));
+                .min(Comparator.comparingInt(RouteComponent::getEta));
     }
 }

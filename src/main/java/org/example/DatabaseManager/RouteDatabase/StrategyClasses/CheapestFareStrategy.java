@@ -1,19 +1,21 @@
 package org.example.DatabaseManager.RouteDatabase.StrategyClasses;
 
-import org.example.DatabaseManager.RouteDatabase.RouteData;
-
-import java.util.*;
+import org.example.DatabaseManager.RouteDatabase.RouteComponent;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Optional;
 
 public class CheapestFareStrategy implements RouteStrategy {
+
     @Override
-    public Optional<RouteData> findBestRoute(ArrayList<RouteData> routes) {
-        return routes.stream().min(Comparator.comparingDouble(RouteData::getFare));
+    public Optional<RouteComponent> findBestRoute(ArrayList<RouteComponent> routes) {
+        return routes.stream()
+                .min(Comparator.comparingDouble(RouteComponent::getFare));
     }
 
     @Override
-    public Optional<ArrayList<RouteData>> findBestTransferRoute(ArrayList<ArrayList<RouteData>> transferRoutes) {
+    public Optional<RouteComponent> findBestTransferRoute(ArrayList<RouteComponent> transferRoutes) {
         return transferRoutes.stream()
-                .min(Comparator.comparingDouble(list ->
-                        list.stream().mapToDouble(RouteData::getFare).sum()));
+                .min(Comparator.comparingDouble(RouteComponent::getFare));
     }
 }

@@ -2,11 +2,11 @@ package org.example.gui.components.Factories;
 
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
+import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.gui.appManager.*;
 import org.example.gui.config.AnimationConfig;
 import org.example.gui.pages.mainPageManager;
 import org.example.gui.resources.*;
-import org.example.DatabaseManager.RouteDatabase.RouteData;
 import org.example.gui.appManager.darkModeToggle;
 import org.example.gui.components.*;
 
@@ -14,8 +14,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static org.example.gui.resources.fonts.loadCustomFont;
@@ -32,23 +34,15 @@ public class factoryPanel {
         copyright.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 12f));
 
         footerPanel.add(copyright);
-
         return footerPanel;
     }
 
     public static RoundingOfButtons createUserButton() throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
-
-        // get current app user
         String username = DatabaseInstance.getCurrentAppUser();
-        if (username == null || username.isEmpty()) {
-            username = "Guest";
-        }
-
-        // final copy for inner class
+        if (username == null || username.isEmpty()) username = "Guest";
         final String displayName = username;
 
-        // create button
         RoundingOfButtons userButton = new RoundingOfButtons(displayName);
         userButton.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         userButton.setFocusPainted(false);
@@ -59,43 +53,25 @@ public class factoryPanel {
         userButton.setBounds(15, 10, 220, 30);
         userButton.setHorizontalAlignment(SwingConstants.LEFT);
 
-        // hover + click
         userButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                userButton.setBackground(themeManager.getYellow());
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                userButton.setBackground(new Color(255, 255, 255, 180));
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
+            @Override public void mouseEntered(MouseEvent e) { userButton.setBackground(themeManager.getYellow()); }
+            @Override public void mouseExited(MouseEvent e) { userButton.setBackground(new Color(255, 255, 255, 180)); }
+            @Override public void mouseClicked(MouseEvent e) {
                 JPopupMenu menu = new JPopupMenu();
-
                 JMenuItem profileItem = new JMenuItem("Profile");
-                profileItem.addActionListener(evt -> {
-                    JOptionPane.showMessageDialog(null,
-                            "Username: " + displayName + "\n(Profile feature coming soon)",
-                            "User Profile", JOptionPane.INFORMATION_MESSAGE);
-                });
-
+                profileItem.addActionListener(evt -> JOptionPane.showMessageDialog(null,
+                        "Username: " + displayName + "\n(Profile feature coming soon)",
+                        "User Profile", JOptionPane.INFORMATION_MESSAGE));
                 JMenuItem logoutItem = new JMenuItem("Logout");
                 logoutItem.addActionListener(evt -> {
                     DatabaseInstance.setLoggedInUser(null, null);
                     JOptionPane.showMessageDialog(null, "You have been logged out.", "Logout", JOptionPane.INFORMATION_MESSAGE);
                     System.exit(0);
                 });
-
-                menu.add(profileItem);
-                menu.addSeparator();
-                menu.add(logoutItem);
+                menu.add(profileItem); menu.addSeparator(); menu.add(logoutItem);
                 menu.show(userButton, 0, userButton.getHeight());
             }
         });
-
         return userButton;
     }
 
@@ -111,10 +87,7 @@ public class factoryPanel {
             private boolean isPaused = false;
 
             {
-                themeManager.addThemeChangeListener(isDarkMode -> {
-                    setBackground(themeManager.getWhite());
-                    repaint();
-                });
+                themeManager.addThemeChangeListener(isDarkMode -> { setBackground(themeManager.getWhite()); repaint(); });
                 setupPanel();
                 setupJeepneyAnimation();
             }
@@ -126,10 +99,9 @@ public class factoryPanel {
                 setBackground(themeManager.getWhite());
 
                 JLabel logo = Images.getInstance().getParaLogoLabel(175, 175);
-                logo.setBounds((getWidth() / 2) - 87, 0, 175, 175); // center when resized
+                logo.setBounds((getWidth() / 2) - 87, 0, 175, 175);
                 addComponentListener(new ComponentAdapter() {
-                    @Override
-                    public void componentResized(ComponentEvent e) {
+                    @Override public void componentResized(ComponentEvent e) {
                         logo.setBounds((getWidth() / 2) - 87, 0, 175, 175);
                     }
                 });
@@ -138,10 +110,8 @@ public class factoryPanel {
                 darkModeToggle toggle = new darkModeToggle();
                 toggle.setBounds(getWidth() - 80, 20, 50, 30);
                 add(toggle);
-
                 addComponentListener(new ComponentAdapter() {
-                    @Override
-                    public void componentResized(ComponentEvent e) {
+                    @Override public void componentResized(ComponentEvent e) {
                         toggle.setBounds(getWidth() - 80, 20, 50, 30);
                     }
                 });
@@ -158,23 +128,12 @@ public class factoryPanel {
                     if (!isPaused) {
                         x += config.speed;
                         if (Math.abs(x - (getWidth() / 2 - jeepney.getWidth(null) / 2)) < config.centerThreshold) {
-                            isPaused = true;
-                            x = getWidth() / 2 - jeepney.getWidth(null) / 2;
-                            Timer pauseTimer = new Timer(config.centerPauseDuration, evt -> {
-                                isPaused = false;
-                                ((Timer) evt.getSource()).stop();
-                            });
-                            pauseTimer.setRepeats(false);
-                            pauseTimer.start();
+                            isPaused = true; x = getWidth() / 2 - jeepney.getWidth(null) / 2;
+                            new Timer(config.centerPauseDuration, evt -> isPaused = false).start();
                         }
                         if (x >= getWidth()) {
                             isPaused = true;
-                            Timer restartTimer = new Timer(config.restartDelay, evt -> {
-                                x = 0;
-                                isPaused = false;
-                            });
-                            restartTimer.setRepeats(false);
-                            restartTimer.start();
+                            new Timer(config.restartDelay, evt -> { x = 0; isPaused = false; }).start();
                         }
                     }
                     repaint();
@@ -182,23 +141,24 @@ public class factoryPanel {
                 timer.start();
             }
 
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2D = (Graphics2D) g;
-                if (backgroundImage != null) {
-                    g2D.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
-                }
-                if (jeepney != null) {
-                    g2D.drawImage(jeepney, x, config.yPosition, null);
-                }
+                if (backgroundImage != null) g2D.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
+                if (jeepney != null) g2D.drawImage(jeepney, x, config.yPosition, null);
             }
         };
-
         return headerPanel;
     }
 
-    public static JPanel createRoutePanel(RouteData routeData, Consumer<RouteData> onClick, mainPageManager routeManager) throws IOException, FontFormatException, SQLException {
+    // ========================================================================
+    // FIXED: createRoutePanel — now uses RouteComponent
+    // ========================================================================
+    public static JPanel createRoutePanel(
+            RouteComponent route,
+            Consumer<RouteComponent> onClick,
+            mainPageManager routeManager) throws IOException, FontFormatException, SQLException {
+
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
         RouteManager manager = new RouteManager();
@@ -211,12 +171,12 @@ public class factoryPanel {
         routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
         routePanel.setOpaque(true);
 
-        // Main info panel (left side)
+        // === LEFT: Route Info ===
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setOpaque(false);
 
-        JLabel routeTitle = new JLabel(routeData.getRoute());
+        JLabel routeTitle = new JLabel(route.getRoute());
         routeTitle.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16));
         routeTitle.setForeground(themeManager.getBlack());
         routeTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -224,7 +184,7 @@ public class factoryPanel {
         infoPanel.add(Box.createVerticalStrut(5));
 
         JLabel detailsLabel = new JLabel(String.format(
-                "<html><b>Details:</b> %s</html>", routeData.getDetails()
+                "<html><b>Details:</b> %s</html>", route.getDetails()
         ));
         detailsLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
         detailsLabel.setForeground(themeManager.getBlack());
@@ -233,30 +193,28 @@ public class factoryPanel {
         infoPanel.add(Box.createVerticalStrut(5));
 
         JLabel infoLabel = new JLabel(String.format(
-                "<html><b>Transfers:</b> %d <b>| Stops:</b> %d <b>| ETA:</b> %s min</html>",
-                routeData.getTransfers(),
-                routeData.getStops(),
-                routeData.getEta()
+                "<html><b>Transfers:</b> %d <b>| Stops:</b> %d <b>| ETA:</b> %d min</html>",
+                route.getTransfers(), route.getStops(), route.getEta()
         ));
         infoLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 13));
         infoLabel.setForeground(themeManager.getForegroundColor());
         infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         infoPanel.add(infoLabel);
 
-        JLabel fareLabel = new JLabel(String.format("Php %.2f", routeData.getFare()));
+        JLabel fareLabel = new JLabel(String.format("Php %.2f", route.getFare()));
         fareLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 14));
         fareLabel.setForeground(themeManager.getBlack());
         fareLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         infoPanel.add(fareLabel);
 
-        // Jeepney info panel (right side)
+        // === RIGHT: Jeepney Info ===
         JPanel jeepneyPanel = new JPanel();
         jeepneyPanel.setLayout(new BoxLayout(jeepneyPanel, BoxLayout.Y_AXIS));
         jeepneyPanel.setOpaque(false);
         jeepneyPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        try {
-            ArrayList<RouteManager.JeepneyInfo> jeepneys = manager.getJeepneysForRoute(routeData.getRoute());
+        try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+            ArrayList<RouteManager.JeepneyInfo> jeepneys = manager.getJeepneysForRoute(route.getRoute(), conn);
 
             if (!jeepneys.isEmpty()) {
                 JLabel jeepneyHeader = new JLabel("Available Jeepneys:");
@@ -265,23 +223,17 @@ public class factoryPanel {
                 jeepneyPanel.add(jeepneyHeader);
                 jeepneyPanel.add(Box.createVerticalStrut(5));
 
-                // Show first 3 jeepneys only to save space
                 int count = Math.min(3, jeepneys.size());
                 for (int i = 0; i < count; i++) {
                     RouteManager.JeepneyInfo jeep = jeepneys.get(i);
-
                     String status = jeep.isFull() ? " [FULL]" :
                             jeep.getAvailableSeats() <= 5 ? " [Almost Full]" : "";
                     Color statusColor = jeep.isFull() ? Color.RED :
-                            jeep.getAvailableSeats() <= 5 ? Color.ORANGE :
-                                    themeManager.getGreen();
+                            jeep.getAvailableSeats() <= 5 ? Color.ORANGE : themeManager.getGreen();
 
                     JLabel jeepLabel = new JLabel(String.format(
                             "<html>%s: <b>%d/%d</b>%s</html>",
-                            jeep.getPlateNumber(),
-                            jeep.getCurrentPassengers(),
-                            jeep.getCapacity(),
-                            status
+                            jeep.getPlateNumber(), jeep.getCurrentPassengers(), jeep.getCapacity(), status
                     ));
                     jeepLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 11));
                     jeepLabel.setForeground(statusColor);
@@ -311,26 +263,10 @@ public class factoryPanel {
         routePanel.add(jeepneyPanel, BorderLayout.EAST);
 
         Color hoverColor = themeManager.getYellow().brighter();
-
         routePanel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                routePanel.setBackground(hoverColor);
-                routePanel.repaint();
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                routePanel.setBackground(defaultColor);
-                routePanel.repaint();
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (onClick != null) {
-                    onClick.accept(routeData);
-                }
-            }
+            @Override public void mouseEntered(MouseEvent e) { routePanel.setBackground(hoverColor); routePanel.repaint(); }
+            @Override public void mouseExited(MouseEvent e) { routePanel.setBackground(defaultColor); routePanel.repaint(); }
+            @Override public void mouseClicked(MouseEvent e) { if (onClick != null) onClick.accept(route); }
         });
 
         themeManager.addThemeChangeListener(isDarkMode -> {
@@ -345,7 +281,13 @@ public class factoryPanel {
         return routePanel;
     }
 
-    public static JPanel createTransferRoutePanel(ArrayList<RouteData> transferRoute, Consumer<ArrayList<RouteData>> onClick) throws IOException, FontFormatException {
+    // ========================================================================
+    // FIXED: createTransferRoutePanel — now uses List<RouteComponent>
+    // ========================================================================
+    public static JPanel createTransferRoutePanel(
+            List<RouteComponent> transferRoute,
+            Consumer<List<RouteComponent>> onClick) throws IOException, FontFormatException {
+
         ThemeManager themeManager = ThemeManager.getInstance();
         Color defaultColor = themeManager.getPanelColor();
 
@@ -363,18 +305,18 @@ public class factoryPanel {
         panel.add(title);
         panel.add(Box.createVerticalStrut(10));
 
-        double totalFare = 0;
-        int totalDistance = 0;
+        double totalFare = 0.0;
+        double totalDistance = 0.0;  // ← Now double
 
         for (int i = 0; i < transferRoute.size(); i++) {
-            RouteData seg = transferRoute.get(i);
+            RouteComponent seg = transferRoute.get(i);
 
             JLabel segLabel = new JLabel(String.format(
-                    "Segment %d: %s — Php %.2f, %d km (%s → %s)",
+                    "Segment %d: %s — Php %.2f, %.0f km (%s to %s)",  // ← %.0f for double
                     i + 1,
                     seg.getRoute(),
                     seg.getFare(),
-                    seg.getDistance(),
+                    seg.getDistance(),           // ← double
                     seg.getFromLocation(),
                     seg.getDestination()
             ));
@@ -383,13 +325,13 @@ public class factoryPanel {
             panel.add(segLabel);
 
             totalFare += seg.getFare();
-            totalDistance += seg.getDistance();
+            totalDistance += seg.getDistance();  // ← double + double
         }
 
         panel.add(Box.createVerticalStrut(10));
 
         JLabel totalLabel = new JLabel(String.format(
-                "Total Fare: Php %.2f | Total Distance: %d km",
+                "Total Fare: Php %.2f | Total Distance: %.0f km",  // ← %.0f for double
                 totalFare, totalDistance
         ));
         totalLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 14));
@@ -398,29 +340,15 @@ public class factoryPanel {
 
         Color hoverColor = themeManager.getYellow().brighter();
         panel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                panel.setBackground(hoverColor);
-                panel.repaint();
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                panel.setBackground(defaultColor);
-                panel.repaint();
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (onClick != null && !transferRoute.isEmpty()) {
-                    onClick.accept(transferRoute);
-                }
-            }
+            @Override public void mouseEntered(MouseEvent e) { panel.setBackground(hoverColor); panel.repaint(); }
+            @Override public void mouseExited(MouseEvent e) { panel.setBackground(defaultColor); panel.repaint(); }
+            @Override public void mouseClicked(MouseEvent e) { if (onClick != null) onClick.accept(transferRoute); }
         });
 
         return panel;
     }
 
+    // === OTHER PANELS (unchanged) ===
     public static RoundingOfPanels createStepPanel(
             int stepNumber,
             String[] textLines,
@@ -431,7 +359,6 @@ public class factoryPanel {
     ) throws IOException, FontFormatException {
 
         ThemeManager themeManager = ThemeManager.getInstance();
-
         RoundingOfPanels panel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setPreferredSize(new Dimension(375, 350));
@@ -439,13 +366,11 @@ public class factoryPanel {
         panel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.putClientProperty("themeColor", themeColor);
 
-        // Heading
         JLabel heading = new JLabel("Step " + stepNumber);
         heading.setAlignmentX(Component.CENTER_ALIGNMENT);
         heading.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 18f));
         heading.setForeground(themeManager.getForegroundColor());
 
-        // Text panel
         RoundingOfPanels textPanel = new RoundingOfPanels(sizeManager.getInstance().getBorderRadiusLarge());
         textPanel.setPreferredSize(new Dimension(30, 20));
         textPanel.setMaximumSize(new Dimension(300, textLines.length > 1 ? 75 : 50));

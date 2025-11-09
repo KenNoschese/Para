@@ -1,43 +1,60 @@
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Optional;
 
+/**
+ * Facade for finding the best route using Strategy Pattern.
+ * Works with {@link RouteComponent} (Composite Pattern).
+ */
 public class NavigationFacade {
 
-    private final RouteManager routeManager;
-    private RouteStrategy routeStrategy;
+    private RouteStrategy strategy;
 
-    public NavigationFacade() throws SQLException {
-        this.routeManager = new RouteManager();
+    public void setRouteStrategy(RouteStrategy s) {
+        this.strategy = s;
     }
 
-    public void setRouteStrategy(RouteStrategy routeStrategy) {
-        this.routeStrategy = routeStrategy;
-    }
+    /**
+     * Finds the best route (direct or with transfer) based on priority.
+     *
+     * @return List of segments (RouteComponent), or null if none
+     */
+    public ArrayList<RouteComponent> findBestRoute(
+            String from, String to, String category, String priority, Connection conn) throws SQLException {
 
-    // FIXED: Now considers DIRECT + TRANSFERS
-    public ArrayList<RouteData> findBestRoute(String from, String to, String category, String priority) throws SQLException {
-        ArrayList<ArrayList<RouteData>> allRoutes = routeManager.findRoutesWithTransfers(from, to, category);
+        RouteManager rm = new RouteManager();
+        ArrayList<RouteComponent> allRoutes = rm.findRoutesWithTransfers(from, to, category, conn);
 
         if (allRoutes.isEmpty()) return null;
 
-        switch (priority.toLowerCase()) {
-            case "distance" -> setRouteStrategy(new ShortestDistanceStrategy());
-            case "eta", "time" -> setRouteStrategy(new ShortestTimeStrategy());
-            case "fare", "cheapest" -> setRouteStrategy(new CheapestFareStrategy());
-            case "transfers", "stops" -> setRouteStrategy(new LeastTransferStrategy());
-            default -> setRouteStrategy(new ShortestDistanceStrategy());
-        }
+        setRouteStrategy(switch (priority.toLowerCase()) {
+            case "distance" -> new ShortestDistanceStrategy();
+            case "eta", "time" -> new ShortestTimeStrategy();
+            case "fare", "cheapest" -> new CheapestFareStrategy();
+            case "transfers", "stops" -> new LeastTransferStrategy();
+            default -> new ShortestDistanceStrategy();
+        });
 
-        Optional<ArrayList<RouteData>> bestFull = routeStrategy.findBestTransferRoute(allRoutes);
-        return bestFull.orElse(null);
+        Optional<RouteComponent> best = strategy.findBestTransferRoute(allRoutes);
+        return best.map(route -> {
+            if (route instanceof Routes composite) {
+                return new ArrayList<>(composite.getSegments());
+            } else {
+                return new ArrayList<>(java.util.List.of(route));
+            }
+        }).orElse(null);
     }
 
-    // Helper: to get full route later in mainPage
-    public ArrayList<ArrayList<RouteData>> getAllRoutes(String from, String to, String category) throws SQLException {
-        return routeManager.findRoutesWithTransfers(from, to, category);
+    /**
+     * Returns all possible routes.
+     */
+    public ArrayList<RouteComponent> getAllRoutes(
+            String from, String to, String category, Connection conn) throws SQLException {
+
+        return new RouteManager().findRoutesWithTransfers(from, to, category, conn);
     }
 }
