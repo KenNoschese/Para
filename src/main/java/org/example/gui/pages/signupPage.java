@@ -133,10 +133,14 @@ public class signupPage extends JPanel {
             boolean success = new UserManager().signUpUser(username, password);
 
             if (success) {
-                JOptionPane.showMessageDialog(this, "Account created! Please log in.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Account created!\nYou can now log in as: " + username + "\nPassword: " + password,
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
                 cardChanger.accept("LOGIN");
             } else {
-                JOptionPane.showMessageDialog(this, "Username already exists.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Username already exists or DB error.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
