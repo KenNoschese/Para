@@ -2,7 +2,6 @@ package org.example.DatabaseManager.RouteDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Routes implements RouteComponent {
     private final List<RouteComponent> segments = new ArrayList<>();

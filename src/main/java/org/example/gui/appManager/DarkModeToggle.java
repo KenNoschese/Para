@@ -1,18 +1,18 @@
 package org.example.gui.appManager;
 
-import org.example.gui.components.RoundingOfButtons;
+import org.example.gui.components.base.RoundedButton;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class darkModeToggle extends JPanel {
-    private final RoundingOfButtons togButt;
+public class DarkModeToggle extends JPanel {
+    private final RoundedButton togButt;
 
-    public darkModeToggle() {
+    public DarkModeToggle() {
         setOpaque(false);
         setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 
-        togButt = new RoundingOfButtons("☾");
+        togButt = new RoundedButton("☾");
         togButt.setArc(20, 20);
         togButt.setPreferredSize(new Dimension(30, 30));
         togButt.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));

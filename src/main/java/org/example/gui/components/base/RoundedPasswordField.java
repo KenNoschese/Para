@@ -1,12 +1,10 @@
-package org.example.gui.components;
-
-import org.example.gui.resources.fonts;
+package org.example.gui.components.base;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-public class RoundingOfTextfields extends JTextField {
+public class RoundedPasswordField extends JPasswordField {
     private int arcWidth = 30;
     private int arcHeight = 30;
     private Color borderColor = Color.WHITE;
@@ -15,10 +13,11 @@ public class RoundingOfTextfields extends JTextField {
     private String placeholder = "";
     private Color placeholderColor = new Color(160, 160, 160);
 
-    public RoundingOfTextfields(int columns) {
+    public RoundedPasswordField(int columns) {
         super(columns);
         setOpaque(false);
         setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        setEchoChar('•'); // bullet style
 
         addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
@@ -40,12 +39,15 @@ public class RoundingOfTextfields extends JTextField {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        // background fill
         g2.setColor(getBackground());
         g2.fill(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, arcWidth, arcHeight));
         g2.dispose();
+
         super.paintComponent(g);
 
-        if (!isFocused && getText().isEmpty() && placeholder != null && !placeholder.isEmpty()) {
+        // placeholder logic
+        if (!isFocused && getPassword().length == 0 && placeholder != null && !placeholder.isEmpty()) {
             Graphics2D g2d = (Graphics2D) g.create();
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.setColor(placeholderColor);
@@ -82,6 +84,7 @@ public class RoundingOfTextfields extends JTextField {
         return new Dimension(100, 30);
     }
 
+    // === Setters and Getters ===
     public void setArc(int width, int height) {
         this.arcWidth = Math.min(width, getHeight() - 2);
         this.arcHeight = Math.min(height, getHeight() - 2);

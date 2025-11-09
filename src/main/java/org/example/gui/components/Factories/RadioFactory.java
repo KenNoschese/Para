@@ -6,7 +6,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JRadioButton;
 
-public class radioFactory {
+public class RadioFactory {
     public static JRadioButton create(String text, Font font, ActionListener listener) {
         JRadioButton radio = new JRadioButton(text);
         radio.setFont(font);

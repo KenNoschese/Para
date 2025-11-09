@@ -5,14 +5,12 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 
-import javax.swing.JTextField;
-
-import org.example.gui.components.RoundingOfTextfields;
+import org.example.gui.components.base.RoundedTextField;
 
 
-public class textfieldFactory {
-    public static RoundingOfTextfields create(String placeholder, int width, int height, int arc, Font font, Color bg, Color fg) {
-        RoundingOfTextfields field = new RoundingOfTextfields(arc);
+public class TextfieldFactory {
+    public static RoundedTextField create(String placeholder, int width, int height, int arc, Font font, Color bg, Color fg) {
+        RoundedTextField field = new RoundedTextField(arc);
         field.setPreferredSize(new Dimension(width, height));
         field.setMaximumSize(new Dimension(width, height));
         field.setBackground(bg);

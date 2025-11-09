@@ -8,7 +8,7 @@ import javax.swing.JLabel;
 
 
 
-public class labelFactory {
+public class LabelFactory {
     public static JLabel create(String text, Font font, Color color) {
         JLabel label = new JLabel(text);
         label.setFont(font);

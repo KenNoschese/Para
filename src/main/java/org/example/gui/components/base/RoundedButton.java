@@ -1,15 +1,15 @@
-package org.example.gui.components;
+package org.example.gui.components.base;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-public class RoundingOfButtons extends JButton {
+public class RoundedButton extends JButton {
 
     private int arcWidth = 30;
     private int arcHeight = 30;
 
-    public RoundingOfButtons(String label) {
+    public RoundedButton(String label) {
         super(label);
         setContentAreaFilled(false);
         setFocusPainted(false);
@@ -37,7 +37,7 @@ public class RoundingOfButtons extends JButton {
         repaint();
     }
 
-    public RoundingOfButtons(String label, int arc) {
+    public RoundedButton(String label, int arc) {
     this(label); 
     this.arcWidth = arc;
     this.arcHeight = arc;

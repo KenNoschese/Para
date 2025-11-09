@@ -2,22 +2,22 @@ package org.example.gui.pages;
 
 import org.example.DatabaseManager.UserDatabase.UserManager;
 import org.example.gui.appManager.ThemeManager;
-import org.example.gui.components.RoundingOfPasswordField;
+import org.example.gui.components.base.RoundedPasswordField;
 import org.example.gui.resources.Images;
-import org.example.gui.resources.fonts;
-import org.example.gui.appManager.sizeManager;
-import org.example.gui.components.RoundingOfButtons;
-import org.example.gui.components.RoundingOfTextfields;
+import org.example.gui.resources.Fonts;
+import org.example.gui.appManager.SizeManager;
+import org.example.gui.components.base.RoundedButton;
+import org.example.gui.components.base.RoundedTextField;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-public class signupPage extends JPanel {
+public class SignupPage extends JPanel {
     private final Consumer<String> cardChanger;
 
-    public signupPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+    public SignupPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
         setupPanel();
     }
@@ -40,23 +40,23 @@ public class signupPage extends JPanel {
         formContent.setBackground(themeManager.getWhite());
 
         JLabel titleLabel = new JLabel("Create Your Account", SwingConstants.CENTER);
-        titleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 18f));
+        titleLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_BOLD, 18f));
         titleLabel.setForeground(themeManager.getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Name Field
-        RoundingOfTextfields nameField = new RoundingOfTextfields(20);
+        RoundedTextField nameField = new RoundedTextField(20);
         nameField.setMaximumSize(new Dimension(400, 45));
-        nameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        nameField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         nameField.setForeground(themeManager.getBlack());
         nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
         nameField.setBorderColor(themeManager.getGray());
         nameField.setPlaceholder("Name");
 
         // Password Field
-        RoundingOfPasswordField passField = new RoundingOfPasswordField(20);
+        RoundedPasswordField passField = new RoundedPasswordField(20);
         passField.setMaximumSize(new Dimension(400, 45));
-        passField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        passField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         passField.setForeground(themeManager.getBlack());
         passField.setBackground(themeManager.getWhite());
         passField.setBorderColor(themeManager.getGray());
@@ -64,9 +64,9 @@ public class signupPage extends JPanel {
         passField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Confirm Password Field
-        RoundingOfPasswordField confirmPassField = new RoundingOfPasswordField(20);
+        RoundedPasswordField confirmPassField = new RoundedPasswordField(20);
         confirmPassField.setMaximumSize(new Dimension(400, 45));
-        confirmPassField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        confirmPassField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         confirmPassField.setForeground(themeManager.getBlack());
         confirmPassField.setBackground(themeManager.getWhite());
         confirmPassField.setBorderColor(themeManager.getGray());
@@ -78,10 +78,10 @@ public class signupPage extends JPanel {
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Back Button
-        RoundingOfButtons backButton = new RoundingOfButtons("Back to Login");
+        RoundedButton backButton = new RoundedButton("Back to Login");
         backButton.setArc(30, 30);
         backButton.setMaximumSize(new Dimension(400, 45));
-        backButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        backButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         backButton.setForeground(themeManager.getWhite());
         backButton.setBackground(themeManager.getRed());
         backButton.setBorder(BorderFactory.createEmptyBorder());
@@ -93,15 +93,15 @@ public class signupPage extends JPanel {
 
         // Add all components to panel
         formContent.add(titleLabel);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(nameField);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingMedium()));
         formContent.add(passField);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingMedium()));
         formContent.add(confirmPassField);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(createButton);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(backButton);
 
         formPanel.add(formContent, BorderLayout.CENTER);
@@ -111,10 +111,10 @@ public class signupPage extends JPanel {
     private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField) {
         ThemeManager themeManager = ThemeManager.getInstance();
 
-        RoundingOfButtons createButton = new RoundingOfButtons("Create Account");
+        RoundedButton createButton = new RoundedButton("Create Account");
         createButton.setArc(30, 30);
         createButton.setMaximumSize(new Dimension(400, 45));
-        try { createButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
+        try { createButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
         createButton.setForeground(themeManager.getWhite());
         createButton.setBackground(themeManager.getBlack());
         createButton.setBorder(BorderFactory.createEmptyBorder());

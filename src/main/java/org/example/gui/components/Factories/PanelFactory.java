@@ -5,12 +5,12 @@ import java.awt.Dimension;
 
 import javax.swing.BoxLayout;
 
-import org.example.gui.components.RoundingOfPanels;
+import org.example.gui.components.base.RoundedPanel;
 
 
-public class panelFactory {
-    public static RoundingOfPanels create(Color bg, int width, int height, int arc) {
-        RoundingOfPanels panel = new RoundingOfPanels(arc);
+public class PanelFactory {
+    public static RoundedPanel create(Color bg, int width, int height, int arc) {
+        RoundedPanel panel = new RoundedPanel(arc);
         if (width > 0 && height > 0) {
             panel.setPreferredSize(new Dimension(width, height));
             panel.setMaximumSize(new Dimension(width, height));

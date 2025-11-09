@@ -4,9 +4,9 @@ import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
 import org.example.gui.appManager.ThemeManager;
-import org.example.gui.components.RoundingOfButtons;
-import org.example.gui.components.RoundingOfPanels;
-import org.example.gui.resources.fonts;
+import org.example.gui.components.base.RoundedButton;
+import org.example.gui.components.base.RoundedPanel;
+import org.example.gui.resources.Fonts;
 
 import javax.swing.*;
 import java.awt.*;
@@ -44,7 +44,7 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         headerWrapper.setPreferredSize(new Dimension(1920, 80));
 
         JLabel title = new JLabel("🚐 Jeepney Behavior Debug");
-        title.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 22f));
+        title.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 22f));
         title.setForeground(themeManager.getForegroundColor());
         title.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 0));
         headerWrapper.add(title, BorderLayout.WEST);
@@ -52,7 +52,7 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         add(headerWrapper, BorderLayout.NORTH);
 
         // 🔹 Input Panel
-        RoundingOfPanels inputPanel = new RoundingOfPanels(25);
+        RoundedPanel inputPanel = new RoundedPanel(25);
         inputPanel.setLayout(new GridLayout(4, 2, 10, 10));
         inputPanel.setBackground(themeManager.getBlue());
         inputPanel.setBorder(BorderFactory.createEmptyBorder(30, 60, 30, 60));
@@ -61,9 +61,9 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         JLabel toLabel = new JLabel("To:");
         JLabel plateLabel = new JLabel("Plate Number:");
 
-        fromLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16f));
-        toLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16f));
-        plateLabel.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16f));
+        fromLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
+        toLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
+        plateLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
 
         fromField = new JTextField();
         toField = new JTextField();
@@ -78,7 +78,7 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
 
         // 🔹 Status Label
         statusLabel = new JLabel("Passengers: -- / --", SwingConstants.CENTER);
-        statusLabel.setFont(loadCustomFont(fonts.DM_SANS_REGULAR, 18f));
+        statusLabel.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 18f));
         statusLabel.setForeground(themeManager.getBlack());
 
         inputPanel.add(new JLabel());
@@ -87,11 +87,11 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         add(inputPanel, BorderLayout.CENTER);
 
         // 🔹 Board Button
-        RoundingOfButtons jeepStatusButton = new RoundingOfButtons("🚐 Board Jeep");
+        RoundedButton jeepStatusButton = new RoundedButton("🚐 Board Jeep");
         jeepStatusButton.setPreferredSize(new Dimension(180, 45));
         jeepStatusButton.setBackground(themeManager.getGreen());
         jeepStatusButton.setForeground(themeManager.getWhite());
-        jeepStatusButton.setFont(loadCustomFont(fonts.DM_SANS_BOLD, 16f));
+        jeepStatusButton.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
 
         jeepStatusButton.addActionListener(e -> handleBoardButton(jeepStatusButton));
 
@@ -113,7 +113,7 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
-    private void handleBoardButton(RoundingOfButtons button) {
+    private void handleBoardButton(RoundedButton button) {
         String plateNumber = plateField.getText().trim();
         Connection conn = DatabaseInstance.getInstance().getConnection();
 

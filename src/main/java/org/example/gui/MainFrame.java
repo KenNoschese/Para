@@ -1,10 +1,10 @@
 package org.example.gui;
 
-import org.example.gui.appManager.sizeManager;
-import org.example.gui.pages.loginPage;
-import org.example.gui.pages.landingPage;
-import org.example.gui.pages.mainPage;
-import org.example.gui.pages.signupPage;
+import org.example.gui.appManager.SizeManager;
+import org.example.gui.pages.LoginPage;
+import org.example.gui.pages.LandingPage;
+import org.example.gui.pages.MainPage;
+import org.example.gui.pages.SignupPage;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,7 +12,7 @@ import java.awt.*;
 public class MainFrame extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainPanel;
-    private mainPage currentMainPage;
+    private MainPage currentMainPage;
 
     public MainFrame() {
         initializeFrame();
@@ -21,7 +21,7 @@ public class MainFrame extends JFrame {
 
     private void initializeFrame() {
         setTitle("Para!");
-        setSize(sizeManager.getInstance().flexibleWidth(1920, 1080));
+        setSize(SizeManager.getInstance().flexibleWidth(1920, 1080));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(true);
@@ -32,9 +32,9 @@ public class MainFrame extends JFrame {
         mainPanel = new JPanel(cardLayout);
 
         try {
-            mainPanel.add(new loginPage(this::changeCard), "LOGIN");
-            mainPanel.add(new signupPage(this::changeCard), "SIGNUP");
-            mainPanel.add(new landingPage(this::changeCard), "LANDING");
+            mainPanel.add(new LoginPage(this::changeCard), "LOGIN");
+            mainPanel.add(new SignupPage(this::changeCard), "SIGNUP");
+            mainPanel.add(new LandingPage(this::changeCard), "LANDING");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -54,7 +54,7 @@ public class MainFrame extends JFrame {
                 }
 
                 // new mainPage with fresh connection so program works
-                currentMainPage = new mainPage(this::changeCard);
+                currentMainPage = new MainPage(this::changeCard);
                 mainPanel.add(currentMainPage, "MAIN");
 
             } catch (Exception e) {

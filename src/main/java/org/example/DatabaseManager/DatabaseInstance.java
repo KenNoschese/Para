@@ -12,18 +12,18 @@ public class DatabaseInstance {
     private Connection connection;
     private Statement statement;
 
-    private final String db = "para_schema";
+    private final String db = "route_schema";
 
     // Default root credentials (admin)
     private String uname = "root";
-    private String pswd = "akosiestre";
+    private String pswd = "Ken11514!";
 
     // Currently logged-in app user / category
     private static String currentAppUser;
     private static String currentAppCategory;
 
     private static final String JDBC_URL =
-            "jdbc:mysql://127.0.0.1:3306/" + "para_schema" + "?serverTimezone=UTC";
+            "jdbc:mysql://127.0.0.1:3306/" + "route_schema" + "?serverTimezone=UTC";
 
     /* ============================================================== */
     /* ====================== USER TRACKING ======================== */

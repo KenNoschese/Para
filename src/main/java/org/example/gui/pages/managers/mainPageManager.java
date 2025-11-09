@@ -1,4 +1,4 @@
-package org.example.gui.pages;
+package org.example.gui.pages.managers;
 
 import org.example.DatabaseManager.RouteDatabase.NavigationFacade;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
@@ -13,7 +13,7 @@ import java.util.*;
 public class mainPageManager {
 
     // ──────────────────────────────────────────────────────────────
-    // SAFE DB READERS – ALREADY IN YOUR CODE (KEEP THEM)
+    // SAFE DB READERS
     // ──────────────────────────────────────────────────────────────
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);

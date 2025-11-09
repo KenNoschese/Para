@@ -1,12 +1,12 @@
 package org.example.gui.pages;
 
 import org.example.DatabaseManager.DatabaseInstance;
-import org.example.gui.components.RoundingOfButtons;
-import org.example.gui.components.RoundingOfTextfields;
-import org.example.gui.components.RoundingOfPasswordField;
-import org.example.gui.resources.fonts;
+import org.example.gui.components.base.RoundedButton;
+import org.example.gui.components.base.RoundedTextField;
+import org.example.gui.components.base.RoundedPasswordField;
+import org.example.gui.resources.Fonts;
 import org.example.gui.resources.Images;
-import org.example.gui.appManager.sizeManager;
+import org.example.gui.appManager.SizeManager;
 import org.example.gui.appManager.ThemeManager;
 
 import javax.swing.*;
@@ -14,10 +14,10 @@ import java.awt.*;
 import java.io.IOException;
 import java.util.function.Consumer;
 
-public class loginPage extends JPanel {
+public class LoginPage extends JPanel {
     private final Consumer<String> cardChanger;
 
-    public loginPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
+    public LoginPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
         setupPanel();
     }
@@ -50,38 +50,38 @@ public class loginPage extends JPanel {
         formContent.setBackground(themeManager.getWhite());
 
         JLabel titleLabel = new JLabel("Enter your username and password", SwingConstants.CENTER);
-        titleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_BOLD, 16f));
+        titleLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
         titleLabel.setForeground(themeManager.getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("Don't have an account?", SwingConstants.CENTER);
-        subtitleLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        subtitleLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         subtitleLabel.setForeground(themeManager.getBlack());
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Username field
-        RoundingOfTextfields usernameField = new RoundingOfTextfields(20);
+        RoundedTextField usernameField = new RoundedTextField(20);
         usernameField.setMaximumSize(new Dimension(400, 45));
-        usernameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        usernameField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         usernameField.setForeground(themeManager.getBlack());
         usernameField.setAlignmentX(Component.CENTER_ALIGNMENT);
         usernameField.setBorderColor(themeManager.getGray());
         usernameField.setPlaceholder("Username");
 
         // Password field
-        RoundingOfPasswordField passwordField = new RoundingOfPasswordField(20);
+        RoundedPasswordField passwordField = new RoundedPasswordField(20);
         passwordField.setMaximumSize(new Dimension(400, 45));
-        passwordField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        passwordField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         passwordField.setForeground(themeManager.getBlack());
         passwordField.setAlignmentX(Component.CENTER_ALIGNMENT);
         passwordField.setBorderColor(themeManager.getGray());
         passwordField.setPlaceholder("Password");
 
         // Sign Up button
-        RoundingOfButtons signUpButton = new RoundingOfButtons("Sign Up");
+        RoundedButton signUpButton = new RoundedButton("Sign Up");
         signUpButton.setArc(30, 30);
         signUpButton.setMaximumSize(new Dimension(400, 45));
-        signUpButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        signUpButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         signUpButton.setForeground(themeManager.getWhite());
         signUpButton.setBackground(themeManager.getBlack());
         signUpButton.setBorder(BorderFactory.createEmptyBorder());
@@ -92,15 +92,15 @@ public class loginPage extends JPanel {
         });
 
         JLabel orLabel = new JLabel("---------- or ----------", SwingConstants.CENTER);
-        orLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
+        orLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 14f));
         orLabel.setForeground(themeManager.getGray());
         orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Login button (actual login logic here)
-        RoundingOfButtons loginButton = new RoundingOfButtons("Login");
+        RoundedButton loginButton = new RoundedButton("Login");
         loginButton.setArc(30, 30);
         loginButton.setMaximumSize(new Dimension(400, 45));
-        loginButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        loginButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         loginButton.setForeground(themeManager.getWhite());
         loginButton.setBackground(themeManager.getRed());
         loginButton.setBorder(BorderFactory.createEmptyBorder());
@@ -153,15 +153,15 @@ public class loginPage extends JPanel {
 
         // Layout assembly
         formContent.add(titleLabel);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(usernameField);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(passwordField);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(loginButton);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(subtitleLabel);
-        formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingSmall()));
+        formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingSmall()));
         formContent.add(signUpButton);
 
         formPanel.add(formContent, BorderLayout.CENTER);
