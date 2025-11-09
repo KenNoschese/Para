@@ -9,17 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Manages route queries using the **Composite Pattern**.
- * Returns {@link RouteComponent} hierarchies:
- *   - Direct route → {@link Routes} with one {@link Segments}
- *   - Transfer route → {@link Routes} with multiple {@link Segments}
+ * Manages route queries using the Composite Pattern.
+ * No category needed — simplified design.
  */
 public class RouteManager {
 
     private final JeepneySubject jeepneySubject = new JeepneySubject();
 
     // ──────────────────────────────────────────────────────────────
-    // SAFE DB READERS – ADD THESE TO THE CLASS
+    // SAFE DB READERS
     // ──────────────────────────────────────────────────────────────
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
@@ -125,7 +123,7 @@ public class RouteManager {
     }
 
     /* ====================== COMPOSITE: DIRECT LEG ====================== */
-    private Segments createSegment(String from, String to, String category, Connection conn) throws SQLException {
+    private Segments createSegment(String from, String to, Connection conn) throws SQLException {
         from = normalize(from);
         to   = normalize(to);
 
@@ -178,13 +176,11 @@ public class RouteManager {
                 if (distKm > baseDist) fare += (distKm - baseDist) * perKmRate;
                 if (fare < 12.0) fare = 12.0;
 
-                double discount = getDiscountRate(category);
-                double finalFare = fare * (1 - discount);
-                int eta = (int) Math.ceil(distKm * 3);
+                int eta = (int) Math.ceil(distKm * 3);  // 3 min per km
 
                 ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to, conn);
 
-                return new Segments(from, to, routeName, category, stopNames, stops, eta, (int) distKm, finalFare);
+                return new Segments(from, to, routeName, "Regular", stopNames, stops, eta, (int) distKm, fare);
             }
         }
     }
@@ -263,24 +259,16 @@ public class RouteManager {
         return stops;
     }
 
-    private double getDiscountRate(String category) {
-        if (category == null) return 0.0;
-        return switch (category.toLowerCase()) {
-            case "student", "pwd", "senior citizen" -> 0.20;
-            default -> 0.0;
-        };
-    }
-
     /* ====================== COMPOSITE: FULL ROUTES ====================== */
     public ArrayList<RouteComponent> findRoutesWithTransfers(
-            String from, String to, String category, Connection conn) throws SQLException {
+            String from, String to, Connection conn) throws SQLException {
 
         from = normalize(from);
         to   = normalize(to);
         ArrayList<RouteComponent> allRoutes = new ArrayList<>();
 
         // === Direct Route ===
-        Segments direct = createSegment(from, to, category, conn);
+        Segments direct = createSegment(from, to, conn);
         if (direct != null) {
             Routes route = new Routes(direct.getRoute() + " (Direct)");
             route.addSegment(direct);
@@ -310,8 +298,8 @@ public class RouteManager {
                 while (rs.next()) {
                     String transfer = rs.getString("transfer_stop");
 
-                    Segments leg1 = createSegment(from, transfer, category, conn);
-                    Segments leg2 = createSegment(transfer, to, category, conn);
+                    Segments leg1 = createSegment(from, transfer, conn);
+                    Segments leg2 = createSegment(transfer, to, conn);
 
                     if (leg1 != null && leg2 != null) {
                         Routes route = new Routes(from + " to " + to + " via " + transfer);

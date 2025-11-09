@@ -25,14 +25,10 @@ public class loginPage extends JPanel {
     private void setupPanel() throws IOException, FontFormatException {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-
-        JPanel loginPanel = createLoginPanel(cardChanger);
-        add(loginPanel, BorderLayout.CENTER);
+        add(createLoginPanel(cardChanger), BorderLayout.CENTER);
     }
 
-    public static JPanel createLoginPanel(Consumer<String> cardChanger)
-            throws IOException, FontFormatException {
-
+    public static JPanel createLoginPanel(Consumer<String> cardChanger) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
 
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -86,17 +82,9 @@ public class loginPage extends JPanel {
         signUpButton.setBackground(themeManager.getBlack());
         signUpButton.setBorder(BorderFactory.createEmptyBorder());
         signUpButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        signUpButton.addActionListener(e -> {
-            System.out.println("➡️ Sign Up button clicked");
-            cardChanger.accept("SIGNUP");
-        });
+        signUpButton.addActionListener(e -> cardChanger.accept("SIGNUP"));
 
-        JLabel orLabel = new JLabel("---------- or ----------", SwingConstants.CENTER);
-        orLabel.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 14f));
-        orLabel.setForeground(themeManager.getGray());
-        orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Login button (actual login logic here)
+        // Login button
         RoundingOfButtons loginButton = new RoundingOfButtons("Login");
         loginButton.setArc(30, 30);
         loginButton.setMaximumSize(new Dimension(400, 45));
@@ -106,52 +94,25 @@ public class loginPage extends JPanel {
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // ✅ Updated login logic that switches DB connection
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
 
             if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Please enter both username and password.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(mainPanel, "Please enter both fields.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            try {
-                System.out.println("Attempting login for user: " + username);
+            boolean success = DatabaseInstance.loginAsUser(username, password);
 
-                boolean success = DatabaseInstance.loginAsUser(username, password);
-
-                if (success) {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "✅ Login successful!\nWelcome, " + username,
-                            "Login Success", JOptionPane.INFORMATION_MESSAGE);
-
-                    // Set logged-in user
-                    DatabaseInstance.setLoggedInUser(username, null);
-
-                    // Confirm connection user
-                    System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
-
-                    // Move to landing page
-                    cardChanger.accept("LANDING");
-                } else {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "Invalid username or password.",
-                            "Login Failed", JOptionPane.ERROR_MESSAGE);
-                    System.out.println("❌ Login failed for user: " + username);
-                }
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Unexpected error: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                System.out.println("Unexpected error during login: " + ex.getMessage());
+            if (success) {
+                JOptionPane.showMessageDialog(mainPanel, "Login successful! Welcome, " + username, "Success", JOptionPane.INFORMATION_MESSAGE);
+                cardChanger.accept("LANDING");
+            } else {
+                JOptionPane.showMessageDialog(mainPanel, "Invalid username or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        // Layout assembly
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
         formContent.add(usernameField);

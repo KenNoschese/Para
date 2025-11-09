@@ -4,6 +4,7 @@ import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,19 +25,20 @@ public class NavigationFacade {
      * @return List of segments (RouteComponent), or null if none
      */
     public ArrayList<RouteComponent> findBestRoute(
-            String from, String to, String category, String priority, Connection conn) throws SQLException {
+            String from, String to, String priority, Connection conn) throws SQLException {
 
         RouteManager rm = new RouteManager();
-        ArrayList<RouteComponent> allRoutes = rm.findRoutesWithTransfers(from, to, category, conn);
+        ArrayList<RouteComponent> allRoutes = rm.findRoutesWithTransfers(from, to, conn);
 
         if (allRoutes.isEmpty()) return null;
 
+        // FIXED: Now priority parameter is passed
         setRouteStrategy(switch (priority.toLowerCase()) {
             case "distance" -> new ShortestDistanceStrategy();
             case "eta", "time" -> new ShortestTimeStrategy();
             case "fare", "cheapest" -> new CheapestFareStrategy();
             case "transfers", "stops" -> new LeastTransferStrategy();
-            default -> new ShortestDistanceStrategy();
+            default -> new ShortestTimeStrategy();
         });
 
         Optional<RouteComponent> best = strategy.findBestTransferRoute(allRoutes);
@@ -44,7 +46,7 @@ public class NavigationFacade {
             if (route instanceof Routes composite) {
                 return new ArrayList<>(composite.getSegments());
             } else {
-                return new ArrayList<>(java.util.List.of(route));
+                return new ArrayList<>(List.of(route));
             }
         }).orElse(null);
     }
@@ -53,8 +55,8 @@ public class NavigationFacade {
      * Returns all possible routes.
      */
     public ArrayList<RouteComponent> getAllRoutes(
-            String from, String to, String category, Connection conn) throws SQLException {
+            String from, String to, Connection conn) throws SQLException {
 
-        return new RouteManager().findRoutesWithTransfers(from, to, category, conn);
+        return new RouteManager().findRoutesWithTransfers(from, to, conn);
     }
 }

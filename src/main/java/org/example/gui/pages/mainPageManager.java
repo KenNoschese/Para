@@ -38,8 +38,7 @@ public class mainPageManager {
         if (from == null || from.trim().isEmpty() || to == null || to.trim().isEmpty()) {
             return SearchResult.empty("Please enter both current location and destination.");
         }
-
-        String category = getUserCategory();
+        String category = "Regular";
         Connection conn = DatabaseInstance.getInstance().getConnection();
 
         if (currentFilter.equals("all")) {
@@ -54,7 +53,7 @@ public class mainPageManager {
     // ──────────────────────────────────────────────────────────────
     private SearchResult searchAllRoutes(String from, String to, String category, Connection conn) throws SQLException {
         RouteManager routeManager = new RouteManager();
-        ArrayList<RouteComponent> allPossible = routeManager.findRoutesWithTransfers(from, to, category, conn);
+        ArrayList<RouteComponent> allPossible = routeManager.findRoutesWithTransfers(from, to, conn);
         allPossible = removeDuplicateRouteOptions(allPossible);
 
         if (allPossible.isEmpty()) {
@@ -71,7 +70,7 @@ public class mainPageManager {
     // ──────────────────────────────────────────────────────────────
     private SearchResult searchFilteredRoutes(String from, String to, String category, Connection conn) throws SQLException {
         NavigationFacade navigationFacade = new NavigationFacade();
-        ArrayList<RouteComponent> bestFullRoute = navigationFacade.findBestRoute(from, to, category, currentFilter, conn);
+        ArrayList<RouteComponent> bestFullRoute = navigationFacade.findBestRoute(from, to, currentFilter, conn);
 
         if (bestFullRoute == null || bestFullRoute.isEmpty()) {
             return SearchResult.empty("No routes found for the selected filter.");
@@ -80,33 +79,6 @@ public class mainPageManager {
         ArrayList<RouteComponent> single = new ArrayList<>();
         single.add(wrapInComposite(bestFullRoute));
         return new SearchResult(single, bestFullRoute, true);
-    }
-
-    private String getUserCategory() {
-        String category = "Student";
-        String query = "SELECT password FROM ActiveSession LIMIT 1";
-
-        try (Connection conn = DatabaseInstance.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query);
-             ResultSet rs = ps.executeQuery()) {
-
-            if (rs.next()) {
-                String pswd = rs.getString("password");
-                if (pswd != null && !pswd.isEmpty()) {
-                    char first = pswd.charAt(0);
-                    category = switch (first) {
-                        case '1' -> "Regular";
-                        case '2' -> "Student";
-                        case '3' -> "PWD";
-                        case '4' -> "Senior Citizen";
-                        default -> "Student";
-                    };
-                }
-            }
-        } catch (Exception ignored) {
-            // Fallback
-        }
-        return category;
     }
 
     public boolean addSavedRoute(RouteComponent route) {

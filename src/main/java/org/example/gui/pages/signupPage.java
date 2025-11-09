@@ -44,14 +44,14 @@ public class signupPage extends JPanel {
         titleLabel.setForeground(themeManager.getBlack());
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Name Field
-        RoundingOfTextfields nameField = new RoundingOfTextfields(20);
-        nameField.setMaximumSize(new Dimension(400, 45));
-        nameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
-        nameField.setForeground(themeManager.getBlack());
-        nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
-        nameField.setBorderColor(themeManager.getGray());
-        nameField.setPlaceholder("Name");
+        // Username Field
+        RoundingOfTextfields usernameField = new RoundingOfTextfields(20);
+        usernameField.setMaximumSize(new Dimension(400, 45));
+        usernameField.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f));
+        usernameField.setForeground(themeManager.getBlack());
+        usernameField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        usernameField.setBorderColor(themeManager.getGray());
+        usernameField.setPlaceholder("Username");
 
         // Password Field
         RoundingOfPasswordField passField = new RoundingOfPasswordField(20);
@@ -74,7 +74,7 @@ public class signupPage extends JPanel {
         confirmPassField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Create Account Button
-        JButton createButton = getJButton(nameField, passField, confirmPassField);
+        JButton createButton = getCreateButton(usernameField, passField, confirmPassField);
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Back Button
@@ -86,15 +86,12 @@ public class signupPage extends JPanel {
         backButton.setBackground(themeManager.getRed());
         backButton.setBorder(BorderFactory.createEmptyBorder());
         backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        backButton.addActionListener(e -> {
-            System.out.println("↩️ Returning to Login Page");
-            cardChanger.accept("LOGIN");
-        });
+        backButton.addActionListener(e -> cardChanger.accept("LOGIN"));
 
-        // Add all components to panel
+        // Add all
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingLarge()));
-        formContent.add(nameField);
+        formContent.add(usernameField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
         formContent.add(passField);
         formContent.add(Box.createVerticalStrut(sizeManager.getInstance().getSpacingMedium()));
@@ -108,37 +105,41 @@ public class signupPage extends JPanel {
         add(formPanel, BorderLayout.CENTER);
     }
 
-    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField) {
+    private JButton getCreateButton(JTextField usernameField, JTextField passField, JTextField confirmPassField) {
         ThemeManager themeManager = ThemeManager.getInstance();
+        RoundingOfButtons button = new RoundingOfButtons("Create Account");
+        button.setArc(30, 30);
+        button.setMaximumSize(new Dimension(400, 45));
+        try { button.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
+        button.setForeground(themeManager.getWhite());
+        button.setBackground(themeManager.getBlack());
+        button.setBorder(BorderFactory.createEmptyBorder());
 
-        RoundingOfButtons createButton = new RoundingOfButtons("Create Account");
-        createButton.setArc(30, 30);
-        createButton.setMaximumSize(new Dimension(400, 45));
-        try { createButton.setFont(fonts.loadCustomFont(fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
-        createButton.setForeground(themeManager.getWhite());
-        createButton.setBackground(themeManager.getBlack());
-        createButton.setBorder(BorderFactory.createEmptyBorder());
+        button.addActionListener(e -> {
+            String username = usernameField.getText().trim();
+            String password = new String(((JPasswordField) passField).getPassword()).trim();
+            String confirm = new String(((JPasswordField) confirmPassField).getPassword()).trim();
 
-        createButton.addActionListener(e -> {
-            String name = nameField.getText().trim();
-            String password = passField.getText().trim();
-            String confirmPassword = confirmPassField.getText().trim();
-
-            if (name.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
+            if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields are required.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            if (!password.equals(confirmPassword)) {
+            if (!password.equals(confirm)) {
                 JOptionPane.showMessageDialog(this, "Passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            System.out.println("📝 Signing up user: " + name + " | Password: " + password);
+            boolean success = new UserManager().signUpUser(username, password);
 
-            new UserManager().signUpUser(name, password);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Account created! Please log in.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                cardChanger.accept("LOGIN");
+            } else {
+                JOptionPane.showMessageDialog(this, "Username already exists.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
-        return createButton;
+        return button;
     }
 }

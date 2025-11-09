@@ -64,7 +64,6 @@ public class factoryPanel {
                         "User Profile", JOptionPane.INFORMATION_MESSAGE));
                 JMenuItem logoutItem = new JMenuItem("Logout");
                 logoutItem.addActionListener(evt -> {
-                    DatabaseInstance.setLoggedInUser(null, null);
                     JOptionPane.showMessageDialog(null, "You have been logged out.", "Logout", JOptionPane.INFORMATION_MESSAGE);
                     System.exit(0);
                 });
