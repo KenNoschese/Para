@@ -1,4 +1,4 @@
-// RouteManager.java
+// RouteManager.java — FIXED: NO CACHED CONNECTION
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
@@ -11,18 +11,11 @@ import java.util.List;
 
 /**
  * Manages route queries using the Composite Pattern.
- * No category needed — simplified design.
- *
- * ALL METHODS USE INTERNAL CONNECTION — NO `Connection conn` PARAMS
+ * NO CACHED CONNECTION — ALWAYS FRESH
  */
 public class RouteManager {
 
-    private final Connection con;
     private final JeepneySubject jeepneySubject = new JeepneySubject();
-
-    public RouteManager() {
-        this.con = DatabaseInstance.getInstance().getConnection();
-    }
 
     // ──────────────────────────────────────────────────────────────
     // SAFE DB READERS
@@ -42,17 +35,14 @@ public class RouteManager {
         if (observer != null) jeepneySubject.registerObserver(observer);
     }
 
-    // FIXED: NO Connection param
     public void boardJeepney(String plateNumber) throws SQLException {
         jeepneySubject.boardJeepney(plateNumber);
     }
 
-    // FIXED: NO Connection param
     public void leaveJeepney(String plateNumber) throws SQLException {
         jeepneySubject.leaveJeepney(plateNumber);
     }
 
-    // FIXED: NO Connection param
     public void showAllJeepneys() throws SQLException {
         jeepneySubject.showAllJeepneys();
     }
@@ -63,20 +53,26 @@ public class RouteManager {
     }
 
     /* ====================== JEEPNEY INFO ====================== */
+    // RouteManager.java — FINAL & BULLETPROOF
     public ArrayList<JeepneyInfo> getJeepneysForRoute(String routeName) throws SQLException {
         ArrayList<JeepneyInfo> jeepneys = new ArrayList<>();
         String sql = """
-            SELECT j.jeepney_id, j.plate_number, j.capacity, j.current_passengers,
-                   r.route_id, r.route_name
-            FROM Jeepneys j
-            JOIN Routes r ON j.route_id = r.route_id
-            WHERE LOWER(r.route_name) = ?
-            ORDER BY j.current_passengers ASC;
-            """;
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
+        SELECT j.jeepney_id, j.plate_number, j.capacity, j.current_passengers,
+               r.route_id, r.route_name
+        FROM Jeepneys j
+        JOIN Routes r ON j.route_id = r.route_id
+        WHERE LOWER(r.route_name) = ?
+        ORDER BY j.current_passengers ASC;
+        """;
+
+        // READ ALL DATA BEFORE CLOSING
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, normalize(routeName));
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
+                    // Extract ALL data HERE
                     jeepneys.add(new JeepneyInfo(
                             getIntSafe(rs, "jeepney_id"),
                             rs.getString("plate_number"),
@@ -88,7 +84,7 @@ public class RouteManager {
                 }
             }
         }
-        return jeepneys;
+        return jeepneys; // ← Safe: data already in memory
     }
 
     public int getJeepneyCountForRoute(String routeName) throws SQLException {
@@ -98,7 +94,10 @@ public class RouteManager {
             JOIN Routes r ON j.route_id = r.route_id
             WHERE LOWER(r.route_name) = ?
             """;
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, normalize(routeName));
             try (ResultSet rs = pst.executeQuery()) {
                 return rs.next() ? getIntSafe(rs, "cnt") : 0;
@@ -140,33 +139,32 @@ public class RouteManager {
 
         boolean outbound = detectDirection(from, to);
         String sql = """
-            SELECT r.route_id, r.route_name,
-                   rs_from.stop_order AS from_order,
-                   rs_to.stop_order   AS to_order,
-                   ABS(rs_to.stop_order - rs_from.stop_order) AS distance_km,
-                   r.base_fare, r.base_distance_km, r.per_km_rate,
-                   (SELECT COUNT(*)
-                      FROM Route_Stops rs_mid
-                      WHERE rs_mid.route_id = r.route_id
-                        AND rs_mid.stop_order BETWEEN
-                            LEAST(rs_from.stop_order, rs_to.stop_order)
-                            AND GREATEST(rs_from.stop_order, rs_to.stop_order)
-                   ) AS stops
-            FROM Routes r
-            JOIN Route_Stops rs_from ON r.route_id = rs_from.route_id
-            JOIN Stops s_from ON rs_from.stop_id = s_from.stop_id
-            JOIN Route_Stops rs_to   ON r.route_id = rs_to.route_id
-            JOIN Stops s_to   ON rs_to.stop_id = s_to.stop_id
-            WHERE LOWER(s_from.stop_name) = LOWER(?)
-              AND LOWER(s_to.stop_name)   = LOWER(?)
-              AND ((? = TRUE  AND rs_from.stop_order < rs_to.stop_order) OR
-                   (? = FALSE AND rs_from.stop_order > rs_to.stop_order))
-            GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order
-            ORDER BY stops ASC, r.route_id ASC
-            LIMIT 1;
-            """;
+        SELECT r.route_id, r.route_name,
+               ABS(rs_to.stop_order - rs_from.stop_order) AS distance_km,
+               r.base_fare, r.base_distance_km, r.per_km_rate,
+               (SELECT COUNT(*) FROM Route_Stops rs_mid
+                  WHERE rs_mid.route_id = r.route_id
+                    AND rs_mid.stop_order BETWEEN
+                        LEAST(rs_from.stop_order, rs_to.stop_order)
+                        AND GREATEST(rs_from.stop_order, rs_to.stop_order)
+               ) AS stops
+        FROM Routes r
+        JOIN Route_Stops rs_from ON r.route_id = rs_from.route_id
+        JOIN Stops s_from ON rs_from.stop_id = s_from.stop_id
+        JOIN Route_Stops rs_to   ON r.route_id = rs_to.route_id
+        JOIN Stops s_to   ON rs_to.stop_id = s_to.stop_id
+        WHERE LOWER(s_from.stop_name) = LOWER(?)
+          AND LOWER(s_to.stop_name)   = LOWER(?)
+          AND ((? = TRUE  AND rs_from.stop_order < rs_to.stop_order) OR
+               (? = FALSE AND rs_from.stop_order > rs_to.stop_order))
+        GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order
+        ORDER BY stops ASC, r.route_id ASC
+        LIMIT 1;
+        """;
 
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, from);
             pst.setString(2, to);
             pst.setBoolean(3, outbound);
@@ -175,19 +173,19 @@ public class RouteManager {
             try (ResultSet rs = pst.executeQuery()) {
                 if (!rs.next()) return null;
 
-                int routeId      = getIntSafe(rs, "route_id");
+                int routeId      = rs.getInt("route_id");
                 String routeName = rs.getString("route_name");
-                double distKm    = getDoubleSafe(rs, "distance_km");
-                int stops        = getIntSafe(rs, "stops");
-                double baseFare  = getDoubleSafe(rs, "base_fare");
-                double baseDist  = getDoubleSafe(rs, "base_distance_km");
-                double perKmRate = getDoubleSafe(rs, "per_km_rate");
+                double distKm    = rs.getDouble("distance_km");
+                int stops        = rs.getInt("stops");
+                double baseFare  = rs.getDouble("base_fare");
+                double baseDist  = rs.getDouble("base_distance_km");
+                double perKmRate = rs.getDouble("per_km_rate");
 
                 double fare = baseFare;
                 if (distKm > baseDist) fare += (distKm - baseDist) * perKmRate;
                 if (fare < 12.0) fare = 12.0;
 
-                int eta = (int) Math.ceil(distKm * 3);  // 3 min per km
+                int eta = (int) Math.ceil(distKm * 3);
 
                 ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
 
@@ -207,14 +205,17 @@ public class RouteManager {
               AND LOWER(st.stop_name) = LOWER(?)
             LIMIT 1;
             """;
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, from);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
                 return rs.next() && rs.getBoolean("is_outbound");
             }
         } catch (SQLException e) {
-            System.out.println("[WARN] Direction detection failed: " + e.getMessage());
+            System.out.println("[WARN] Direction detection failed: " + e.getCause());
         }
         return true;
     }
@@ -224,22 +225,23 @@ public class RouteManager {
         to   = normalize(to);
         ArrayList<String> stops = new ArrayList<>();
 
-        String orderSql = """
-            SELECT stop_order
-            FROM Route_Stops rs
-            JOIN Stops s ON rs.stop_id = s.stop_id
-            WHERE rs.route_id = ? AND LOWER(s.stop_name) = LOWER(?);
-            """;
-
-        int fromOrder = -1, toOrder = -1;
-        try (PreparedStatement pst = con.prepareStatement(orderSql)) {
+        // Get fromOrder
+        int fromOrder = -1;
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(
+                     "SELECT stop_order FROM Route_Stops rs JOIN Stops s ON rs.stop_id = s.stop_id WHERE rs.route_id = ? AND LOWER(s.stop_name) = LOWER(?)")) {
             pst.setInt(1, routeId);
             pst.setString(2, from);
             try (ResultSet rs = pst.executeQuery()) {
                 if (rs.next()) fromOrder = getIntSafe(rs, "stop_order");
             }
         }
-        try (PreparedStatement pst = con.prepareStatement(orderSql)) {
+
+        // Get toOrder
+        int toOrder = -1;
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(
+                     "SELECT stop_order FROM Route_Stops rs JOIN Stops s ON rs.stop_id = s.stop_id WHERE rs.route_id = ? AND LOWER(s.stop_name) = LOWER(?)")) {
             pst.setInt(1, routeId);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
@@ -251,20 +253,23 @@ public class RouteManager {
 
         boolean asc = fromOrder < toOrder;
         String stopSql = """
-            SELECT s.stop_name
-            FROM Route_Stops rs
-            JOIN Stops s ON rs.stop_id = s.stop_id
-            WHERE rs.route_id = ?
-              AND rs.stop_order BETWEEN ? AND ?
-            ORDER BY rs.stop_order %s;
-            """.formatted(asc ? "" : "DESC");
+        SELECT s.stop_name
+        FROM Route_Stops rs
+        JOIN Stops s ON rs.stop_id = s.stop_id
+        WHERE rs.route_id = ?
+          AND rs.stop_order BETWEEN ? AND ?
+        ORDER BY rs.stop_order %s;
+        """.formatted(asc ? "" : "DESC");
 
-        try (PreparedStatement pst = con.prepareStatement(stopSql)) {
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(stopSql)) {
             pst.setInt(1, routeId);
             pst.setInt(2, Math.min(fromOrder, toOrder));
             pst.setInt(3, Math.max(fromOrder, toOrder));
             try (ResultSet rs = pst.executeQuery()) {
-                while (rs.next()) stops.add(rs.getString("stop_name"));
+                while (rs.next()) {
+                    stops.add(rs.getString("stop_name"));
+                }
             }
         }
         return stops;
@@ -284,41 +289,63 @@ public class RouteManager {
             allRoutes.add(route);
         }
 
-        // === Transfer Routes ===
-        String sql = """
-            SELECT DISTINCT tp.from_route_id, tp.to_route_id, s.stop_name AS transfer_stop
-            FROM Transfer_Points tp
-            JOIN Stops s ON tp.stop_id = s.stop_id
-            JOIN Route_Stops rs_from ON rs_from.route_id = tp.from_route_id
-            JOIN Stops sf ON rs_from.stop_id = sf.stop_id AND LOWER(sf.stop_name) = LOWER(?)
-            JOIN Route_Stops rs_t1   ON rs_t1.route_id   = tp.from_route_id AND rs_t1.stop_id   = s.stop_id
-            JOIN Route_Stops rs_to   ON rs_to.route_id   = tp.to_route_id
-            JOIN Stops st ON rs_to.stop_id = st.stop_id AND LOWER(st.stop_name) = LOWER(?)
-            JOIN Route_Stops rs_t2   ON rs_t2.route_id   = tp.to_route_id   AND rs_t2.stop_id   = s.stop_id
-            WHERE tp.from_route_id != tp.to_route_id
-              AND rs_from.stop_order < rs_t1.stop_order
-              AND rs_t2.stop_order   < rs_to.stop_order;
-            """;
+        // === STEP 1: READ ALL TRANSFER DATA INTO MEMORY ===
+        class TransferInfo {
+            final int fromRouteId, toRouteId;
+            final String transferStop;
 
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            TransferInfo(int fromRouteId, int toRouteId, String transferStop) {
+                this.fromRouteId = fromRouteId;
+                this.toRouteId = toRouteId;
+                this.transferStop = transferStop;
+            }
+        }
+
+        List<TransferInfo> transfers = new ArrayList<>();
+        String sql = """
+        SELECT DISTINCT tp.from_route_id, tp.to_route_id, s.stop_name AS transfer_stop
+        FROM Transfer_Points tp
+        JOIN Stops s ON tp.stop_id = s.stop_id
+        JOIN Route_Stops rs_from ON rs_from.route_id = tp.from_route_id
+        JOIN Stops sf ON rs_from.stop_id = sf.stop_id AND LOWER(sf.stop_name) = LOWER(?)
+        JOIN Route_Stops rs_t1   ON rs_t1.route_id   = tp.from_route_id AND rs_t1.stop_id   = s.stop_id
+        JOIN Route_Stops rs_to   ON rs_to.route_id   = tp.to_route_id
+        JOIN Stops st ON rs_to.stop_id = st.stop_id AND LOWER(st.stop_name) = LOWER(?)
+        JOIN Route_Stops rs_t2   ON rs_t2.route_id   = tp.to_route_id   AND rs_t2.stop_id   = s.stop_id
+        WHERE tp.from_route_id != tp.to_route_id
+          AND rs_from.stop_order < rs_t1.stop_order
+          AND rs_t2.stop_order   < rs_to.stop_order;
+        """;
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, from);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
-                    String transfer = rs.getString("transfer_stop");
-
-                    Segments leg1 = createSegment(from, transfer);
-                    Segments leg2 = createSegment(transfer, to);
-
-                    if (leg1 != null && leg2 != null) {
-                        Routes route = new Routes(from + " to " + to + " via " + transfer);
-                        route.addSegment(leg1);
-                        route.addSegment(leg2);
-                        allRoutes.add(route);
-                    }
+                    transfers.add(new TransferInfo(
+                            rs.getInt("from_route_id"),
+                            rs.getInt("to_route_id"),
+                            rs.getString("transfer_stop")
+                    ));
                 }
             }
         }
+
+        // === STEP 2: NOW PROCESS EACH TRANSFER SAFELY ===
+        for (TransferInfo ti : transfers) {
+            Segments leg1 = createSegment(from, ti.transferStop);
+            Segments leg2 = createSegment(ti.transferStop, to);
+
+            if (leg1 != null && leg2 != null) {
+                Routes route = new Routes(from + " to " + to + " via " + ti.transferStop);
+                route.addSegment(leg1);
+                route.addSegment(leg2);
+                allRoutes.add(route);
+            }
+        }
+
         return allRoutes;
     }
 }

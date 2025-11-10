@@ -6,4 +6,3 @@ package org.example.DatabaseManager.RouteDatabase.ObserversClasses;
 public interface JeepneyObserver {
     void update(String plateNumber, int currentPassengers, int capacity);
 }
-
