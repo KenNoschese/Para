@@ -25,43 +25,39 @@ public class LoginPage extends JPanel {
     private void setupPanel() throws IOException, FontFormatException {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-
-        JPanel loginPanel = createLoginPanel(cardChanger);
-        add(loginPanel, BorderLayout.CENTER);
+        add(createLoginPanel(cardChanger), BorderLayout.CENTER);
     }
 
-    public static JPanel createLoginPanel(Consumer<String> cardChanger)
-            throws IOException, FontFormatException {
-
+    public static JPanel createLoginPanel(Consumer<String> cardChanger) throws IOException, FontFormatException {
         ThemeManager themeManager = ThemeManager.getInstance();
 
-        // Main container with horizontal split
+        // Main container: split into left (graphic) and right (form)
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(themeManager.getWhite());
 
-        // Left side - Graphic panel (960x1080)
+        // === LEFT: City Graphic (960x1080) ===
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setPreferredSize(new Dimension(960, 1080));
         leftPanel.setBackground(themeManager.getWhite());
 
         try {
-            // Load and display the city graphic
             JLabel graphicLabel = Images.getInstance().getCityGraphic(960, 1080);
             leftPanel.add(graphicLabel, BorderLayout.CENTER);
         } catch (Exception e) {
             System.err.println("Could not load citygraphic.png: " + e.getMessage());
-            // Fallback: show a colored panel if image not found
-            leftPanel.setBackground(new Color(240, 240, 240));
+            leftPanel.setBackground(new Color(240, 240, 240)); // fallback
         }
 
-        // Right side - Login form panel
+        // === RIGHT: Login Form ===
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBackground(themeManager.getWhite());
         rightPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 100, 50));
 
+        // Logo
         JLabel logo = Images.getInstance().getParaLogoLabel(250, 250);
         rightPanel.add(logo, BorderLayout.NORTH);
 
+        // Form content
         JPanel formPanel = new JPanel(new BorderLayout());
         formPanel.setBackground(themeManager.getWhite());
 
@@ -69,6 +65,7 @@ public class LoginPage extends JPanel {
         formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
         formContent.setBackground(themeManager.getWhite());
 
+        // Title & Subtitle
         JLabel titleLabel = new JLabel("Enter your username and password", SwingConstants.CENTER);
         titleLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
         titleLabel.setForeground(themeManager.getBlack());
@@ -79,7 +76,7 @@ public class LoginPage extends JPanel {
         subtitleLabel.setForeground(themeManager.getBlack());
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Username field
+        // === INPUT FIELDS ===
         RoundedTextField usernameField = new RoundedTextField(20);
         usernameField.setMaximumSize(new Dimension(400, 45));
         usernameField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
@@ -88,7 +85,6 @@ public class LoginPage extends JPanel {
         usernameField.setBorderColor(themeManager.getGray());
         usernameField.setPlaceholder("Username");
 
-        // Password field
         RoundedPasswordField passwordField = new RoundedPasswordField(20);
         passwordField.setMaximumSize(new Dimension(400, 45));
         passwordField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
@@ -97,35 +93,27 @@ public class LoginPage extends JPanel {
         passwordField.setBorderColor(themeManager.getGray());
         passwordField.setPlaceholder("Password");
 
-        // Sign Up button
+        // === BUTTONS ===
         RoundedButton signUpButton = new RoundedButton("Sign Up");
         signUpButton.setArc(30, 30);
         signUpButton.setMaximumSize(new Dimension(400, 45));
         signUpButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         signUpButton.setForeground(themeManager.getWhite());
         signUpButton.setBackground(themeManager.getBlack());
-        signUpButton.setBorder(BorderFactory.createEmptyBorder());
+        signUpButton.setBorderPainted(false);
         signUpButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        signUpButton.addActionListener(e -> {
-            System.out.println("➡️ Sign Up button clicked");
-            cardChanger.accept("SIGNUP");
-        });
+        signUpButton.addActionListener(e -> cardChanger.accept("SIGNUP"));
 
-        JLabel orLabel = new JLabel("---------- or ----------", SwingConstants.CENTER);
-        orLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 14f));
-        orLabel.setForeground(themeManager.getGray());
-        orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Login button
         RoundedButton loginButton = new RoundedButton("Login");
         loginButton.setArc(30, 30);
         loginButton.setMaximumSize(new Dimension(400, 45));
         loginButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         loginButton.setForeground(themeManager.getWhite());
         loginButton.setBackground(themeManager.getRed());
-        loginButton.setBorder(BorderFactory.createEmptyBorder());
+        loginButton.setBorderPainted(false);
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // === LOGIN LOGIC (OLD FUNCTIONALITY PRESERVED) ===
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
@@ -137,36 +125,29 @@ public class LoginPage extends JPanel {
                 return;
             }
 
-            try {
-                System.out.println("Attempting login for user: " + username);
+            System.out.println("Attempting login for user: " + username);
 
-                boolean success = DatabaseInstance.loginAsUser(username, password);
+            boolean success = DatabaseInstance.loginAsUser(username, password);
 
-                if (success) {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "✅ Login successful!\nWelcome, " + username,
-                            "Login Success", JOptionPane.INFORMATION_MESSAGE);
-
-                    DatabaseInstance.setLoggedInUser(username, null);
-                    System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
-
-                    cardChanger.accept("LANDING");
-                } else {
-                    JOptionPane.showMessageDialog(mainPanel,
-                            "Invalid username or password.",
-                            "Login Failed", JOptionPane.ERROR_MESSAGE);
-                    System.out.println("❌ Login failed for user: " + username);
-                }
-
-            } catch (Exception ex) {
+            if (success) {
                 JOptionPane.showMessageDialog(mainPanel,
-                        "Unexpected error: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                System.out.println("Unexpected error during login: " + ex.getMessage());
+                        "Login successful!\nWelcome, " + username,
+                        "Login Success", JOptionPane.INFORMATION_MESSAGE);
+
+                // Optional: update session (if needed)
+                DatabaseInstance.setLoggedInUser(username);
+                System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
+
+                cardChanger.accept("LANDING");
+            } else {
+                JOptionPane.showMessageDialog(mainPanel,
+                        "Invalid username or password.",
+                        "Login Failed", JOptionPane.ERROR_MESSAGE);
+                System.out.println("Login failed for user: " + username);
             }
         });
 
-        // Layout assembly for right panel
+        // === ASSEMBLE FORM ===
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(usernameField);
@@ -182,7 +163,7 @@ public class LoginPage extends JPanel {
         formPanel.add(formContent, BorderLayout.CENTER);
         rightPanel.add(formPanel, BorderLayout.CENTER);
 
-        // Combine left and right panels
+        // === FINAL LAYOUT ===
         mainPanel.add(leftPanel, BorderLayout.WEST);
         mainPanel.add(rightPanel, BorderLayout.CENTER);
 

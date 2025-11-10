@@ -1,8 +1,7 @@
 package org.example.gui.pages;
 
-import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
-import org.example.DatabaseManager.RouteDatabase.RouteManager;
+import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneySubject;
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedPanel;
@@ -14,23 +13,35 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
  * Temporary testing page for Jeepney observer + database updates.
+ *
+ * Features:
+ * - Enter plate number (e.g., ABC-123)
+ * - Click "Board Jeep" → +1 passenger
+ * - Click "Leave Jeep" → -1 passenger
+ * - Live update: "Passengers: 5 / 16"
+ * - Red text when full
+ * - Real-time via Observer Pattern
+ *
+ * Requires:
+ * - JeepneySubject with boardJeepney(String) and leaveJeepney(String)
+ * - Jeepney in DB: INSERT INTO Jeepneys (plate_number, route_id, capacity) VALUES ('ABC-123', 1, 16);
  */
 public class testPage_deleteLater extends JPanel implements JeepneyObserver {
-    private ThemeManager themeManager;
+
+    private final ThemeManager themeManager;
+    private final JeepneySubject jeepneySubject;
     private JLabel statusLabel;
-    private JTextField plateField, fromField, toField;
-    private RouteManager routeManager;
+    private JTextField plateField;
     private boolean inJeep = false;
 
     public testPage_deleteLater() throws IOException, FontFormatException, SQLException {
         this.themeManager = ThemeManager.getInstance();
-        this.routeManager = new RouteManager();
-        this.routeManager.addJeepneyObserver(this); // Register observer
+        this.jeepneySubject = new JeepneySubject();
+        this.jeepneySubject.registerObserver(this);
         setupUI();
     }
 
@@ -38,124 +49,138 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         setLayout(new BorderLayout());
         setBackground(themeManager.getBackgroundColor());
 
-        // 🔹 Header
+        // ========================================
+        // HEADER
+        // ========================================
         JPanel headerWrapper = new JPanel(new BorderLayout());
         headerWrapper.setBackground(themeManager.getBackgroundColor());
         headerWrapper.setPreferredSize(new Dimension(1920, 80));
 
-        JLabel title = new JLabel("🚐 Jeepney Behavior Debug");
+        JLabel title = new JLabel("Jeepney Behavior Debug");
         title.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 22f));
         title.setForeground(themeManager.getForegroundColor());
         title.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 0));
         headerWrapper.add(title, BorderLayout.WEST);
-
         add(headerWrapper, BorderLayout.NORTH);
 
-        // 🔹 Input Panel
+        // ========================================
+        // INPUT PANEL
+        // ========================================
         RoundedPanel inputPanel = new RoundedPanel(25);
-        inputPanel.setLayout(new GridLayout(4, 2, 10, 10));
+        inputPanel.setLayout(new GridLayout(3, 2, 10, 10));
         inputPanel.setBackground(themeManager.getBlue());
         inputPanel.setBorder(BorderFactory.createEmptyBorder(30, 60, 30, 60));
 
-        JLabel fromLabel = new JLabel("From:");
-        JLabel toLabel = new JLabel("To:");
         JLabel plateLabel = new JLabel("Plate Number:");
-
-        fromLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
-        toLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
         plateLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
+        plateLabel.setForeground(themeManager.getWhite());
 
-        fromField = new JTextField();
-        toField = new JTextField();
         plateField = new JTextField();
+        plateField.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
 
-        inputPanel.add(fromLabel);
-        inputPanel.add(fromField);
-        inputPanel.add(toLabel);
-        inputPanel.add(toField);
         inputPanel.add(plateLabel);
         inputPanel.add(plateField);
 
-        // 🔹 Status Label
+        // Status Label
         statusLabel = new JLabel("Passengers: -- / --", SwingConstants.CENTER);
         statusLabel.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 18f));
-        statusLabel.setForeground(themeManager.getBlack());
+        statusLabel.setForeground(themeManager.getWhite());
 
         inputPanel.add(new JLabel());
         inputPanel.add(statusLabel);
 
         add(inputPanel, BorderLayout.CENTER);
 
-        // 🔹 Board Button
-        RoundedButton jeepStatusButton = new RoundedButton("🚐 Board Jeep");
-        jeepStatusButton.setPreferredSize(new Dimension(180, 45));
-        jeepStatusButton.setBackground(themeManager.getGreen());
-        jeepStatusButton.setForeground(themeManager.getWhite());
-        jeepStatusButton.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
+        // ========================================
+        // BOARD / LEAVE BUTTON
+        // ========================================
+        RoundedButton boardButton = new RoundedButton("Board Jeep");
+        boardButton.setPreferredSize(new Dimension(180, 45));
+        boardButton.setBackground(themeManager.getGreen());
+        boardButton.setForeground(themeManager.getWhite());
+        boardButton.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16f));
+        boardButton.addActionListener(e -> handleBoardButton(boardButton));
 
-        jeepStatusButton.addActionListener(e -> handleBoardButton(jeepStatusButton));
-
-        jeepStatusButton.addMouseListener(new MouseAdapter() {
+        boardButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                jeepStatusButton.setForeground(themeManager.getBlack());
+                boardButton.setForeground(themeManager.getBlack());
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                jeepStatusButton.setForeground(themeManager.getWhite());
+                boardButton.setForeground(themeManager.getWhite());
             }
         });
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 15));
         bottomPanel.setBackground(themeManager.getBackgroundColor());
-        bottomPanel.add(jeepStatusButton);
+        bottomPanel.add(boardButton);
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
+    /**
+     * Handle Board / Leave button click
+     */
     private void handleBoardButton(RoundedButton button) {
         String plateNumber = plateField.getText().trim();
-        Connection conn = DatabaseInstance.getInstance().getConnection();
 
         if (plateNumber.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter a plate number first.");
+            JOptionPane.showMessageDialog(this, "Please enter a plate number first.", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
             if (!inJeep) {
-                routeManager.boardJeepney(plateNumber, conn);
-                button.setText("🏁 Leave Jeep");
-                button.setBackground(themeManager.getBlue());
+                // BOARD: +1 passenger
+                jeepneySubject.boardJeepney(plateNumber);
+                button.setText("Leave Jeep");
+                button.setBackground(themeManager.getRed());
                 inJeep = true;
             } else {
-                routeManager.leaveJeepney(plateNumber, conn);
-                button.setText("🚐 Board Jeep");
+                // LEAVE: -1 passenger
+                jeepneySubject.leaveJeepney(plateNumber);
+                button.setText("Board Jeep");
                 button.setBackground(themeManager.getGreen());
                 inJeep = false;
             }
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Error updating jeepney: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }
 
+    /**
+     * Observer update — called when passenger count changes
+     */
     @Override
     public void update(String plateNumber, int currentPassengers, int capacity) {
-        // ✅ Update the label whenever the Jeepney data changes
-        SwingUtilities.invokeLater(() ->
-                statusLabel.setText("Passengers: " + currentPassengers + " / " + capacity)
-        );
-        System.out.println("[Observer Update] Jeep " + plateNumber + ": " + currentPassengers + "/" + capacity);
+        String displayPlate = plateField.getText().trim();
+        if (displayPlate.equals(plateNumber)) {
+            SwingUtilities.invokeLater(() -> {
+                statusLabel.setText("Passengers: " + currentPassengers + " / " + capacity);
+                if (currentPassengers >= capacity) {
+                    statusLabel.setForeground(themeManager.getRed());
+                } else {
+                    statusLabel.setForeground(themeManager.getWhite());
+                }
+            });
+        }
+        System.out.println("[GUI Observer] Jeep " + plateNumber + ": " + currentPassengers + "/" + capacity);
     }
 
+    /**
+     * Load custom font from resources
+     */
     private static Font loadCustomFont(String fontPath, float size) throws IOException, FontFormatException {
         Font font = Font.createFont(Font.TRUETYPE_FONT, new File(fontPath));
         GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
         return font.deriveFont(size);
     }
 
-    // ✅ Standalone debug
+    // ========================================
+    // STANDALONE TEST
+    // ========================================
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {

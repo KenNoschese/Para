@@ -803,7 +803,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
             // Get available jeepneys
             ArrayList<RouteManager.JeepneyInfo> jeepneys =
-                    routeManager.getJeepneysForRoute(route.getRoute(), conn);
+                    routeManager.getJeepneysForRoute(route.getRoute());
 
             if (jeepneys.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
@@ -828,7 +828,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             }
 
             // Board the jeepney (this will trigger observer notifications)
-            routeManager.boardJeepney(available.getPlateNumber(), conn);
+            routeManager.boardJeepney(available.getPlateNumber());
 
             // Update trip state
             stateManager.startTrip(
@@ -879,7 +879,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         if (confirmed) {
             try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
                 // Leave jeepney
-                routeManager.leaveJeepney(trip.getJeepney().getPlateNumber(), conn);
+                routeManager.leaveJeepney(trip.getJeepney().getPlateNumber());
 
                 // Mark trip as completed
                 stateManager.completeTrip();

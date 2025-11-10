@@ -139,7 +139,7 @@ public class DirectRoutePanel implements RoutePanel {
 
         try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
             ArrayList<RouteManager.JeepneyInfo> jeepneys =
-                    routeManager.getJeepneysForRoute(routeData.getRoute(), conn);
+                    routeManager.getJeepneysForRoute(routeData.getRoute());
 
             if (!jeepneys.isEmpty()) {
                 System.out.println("📊 Jeepneys found for route " + routeData.getRoute() + ": " + jeepneys.size());

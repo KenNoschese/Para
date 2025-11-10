@@ -31,9 +31,18 @@ public class UserButton {
         userButton.setHorizontalAlignment(SwingConstants.LEFT);
 
         userButton.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { userButton.setBackground(themeManager.getYellow()); }
-            @Override public void mouseExited(MouseEvent e) { userButton.setBackground(new Color(255, 255, 255, 180)); }
-            @Override public void mouseClicked(MouseEvent e) {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                userButton.setBackground(themeManager.getYellow());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                userButton.setBackground(new Color(255, 255, 255, 180));
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
                 JPopupMenu menu = new JPopupMenu();
                 JMenuItem profileItem = new JMenuItem("Profile");
                 profileItem.addActionListener(evt -> JOptionPane.showMessageDialog(null,
@@ -41,11 +50,12 @@ public class UserButton {
                         "User Profile", JOptionPane.INFORMATION_MESSAGE));
                 JMenuItem logoutItem = new JMenuItem("Logout");
                 logoutItem.addActionListener(evt -> {
-                    DatabaseInstance.setLoggedInUser(null, null);
                     JOptionPane.showMessageDialog(null, "You have been logged out.", "Logout", JOptionPane.INFORMATION_MESSAGE);
                     System.exit(0);
                 });
-                menu.add(profileItem); menu.addSeparator(); menu.add(logoutItem);
+                menu.add(profileItem);
+                menu.addSeparator();
+                menu.add(logoutItem);
                 menu.show(userButton, 0, userButton.getHeight());
             }
         });

@@ -1,3 +1,4 @@
+// RouteManager.java
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
@@ -9,17 +10,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Manages route queries using the **Composite Pattern**.
- * Returns {@link RouteComponent} hierarchies:
- *   - Direct route → {@link Routes} with one {@link Segments}
- *   - Transfer route → {@link Routes} with multiple {@link Segments}
+ * Manages route queries using the Composite Pattern.
+ * No category needed — simplified design.
+ *
+ * ALL METHODS USE INTERNAL CONNECTION — NO `Connection conn` PARAMS
  */
 public class RouteManager {
 
+    private final Connection con;
     private final JeepneySubject jeepneySubject = new JeepneySubject();
 
+    public RouteManager() {
+        this.con = DatabaseInstance.getInstance().getConnection();
+    }
+
     // ──────────────────────────────────────────────────────────────
-    // SAFE DB READERS – ADD THESE TO THE CLASS
+    // SAFE DB READERS
     // ──────────────────────────────────────────────────────────────
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
@@ -36,16 +42,19 @@ public class RouteManager {
         if (observer != null) jeepneySubject.registerObserver(observer);
     }
 
-    public void boardJeepney(String plateNumber, Connection conn) throws SQLException {
-        jeepneySubject.boardJeepney(plateNumber, conn);
+    // FIXED: NO Connection param
+    public void boardJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.boardJeepney(plateNumber);
     }
 
-    public void leaveJeepney(String plateNumber, Connection conn) throws SQLException {
-        jeepneySubject.leaveJeepney(plateNumber, conn);
+    // FIXED: NO Connection param
+    public void leaveJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.leaveJeepney(plateNumber);
     }
 
-    public void showAllJeepneys(Connection conn) throws SQLException {
-        jeepneySubject.showAllJeepneys(conn);
+    // FIXED: NO Connection param
+    public void showAllJeepneys() throws SQLException {
+        jeepneySubject.showAllJeepneys();
     }
 
     /* ====================== UTILITIES ====================== */
@@ -54,7 +63,7 @@ public class RouteManager {
     }
 
     /* ====================== JEEPNEY INFO ====================== */
-    public ArrayList<JeepneyInfo> getJeepneysForRoute(String routeName, Connection conn) throws SQLException {
+    public ArrayList<JeepneyInfo> getJeepneysForRoute(String routeName) throws SQLException {
         ArrayList<JeepneyInfo> jeepneys = new ArrayList<>();
         String sql = """
             SELECT j.jeepney_id, j.plate_number, j.capacity, j.current_passengers,
@@ -64,7 +73,7 @@ public class RouteManager {
             WHERE LOWER(r.route_name) = ?
             ORDER BY j.current_passengers ASC;
             """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, normalize(routeName));
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
@@ -82,14 +91,14 @@ public class RouteManager {
         return jeepneys;
     }
 
-    public int getJeepneyCountForRoute(String routeName, Connection conn) throws SQLException {
+    public int getJeepneyCountForRoute(String routeName) throws SQLException {
         String sql = """
             SELECT COUNT(*) AS cnt
             FROM Jeepneys j
             JOIN Routes r ON j.route_id = r.route_id
             WHERE LOWER(r.route_name) = ?
             """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, normalize(routeName));
             try (ResultSet rs = pst.executeQuery()) {
                 return rs.next() ? getIntSafe(rs, "cnt") : 0;
@@ -125,11 +134,11 @@ public class RouteManager {
     }
 
     /* ====================== COMPOSITE: DIRECT LEG ====================== */
-    private Segments createSegment(String from, String to, String category, Connection conn) throws SQLException {
+    private Segments createSegment(String from, String to) throws SQLException {
         from = normalize(from);
         to   = normalize(to);
 
-        boolean outbound = detectDirection(from, to, conn);
+        boolean outbound = detectDirection(from, to);
         String sql = """
             SELECT r.route_id, r.route_name,
                    rs_from.stop_order AS from_order,
@@ -157,7 +166,7 @@ public class RouteManager {
             LIMIT 1;
             """;
 
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, from);
             pst.setString(2, to);
             pst.setBoolean(3, outbound);
@@ -178,18 +187,16 @@ public class RouteManager {
                 if (distKm > baseDist) fare += (distKm - baseDist) * perKmRate;
                 if (fare < 12.0) fare = 12.0;
 
-                double discount = getDiscountRate(category);
-                double finalFare = fare * (1 - discount);
-                int eta = (int) Math.ceil(distKm * 3);
+                int eta = (int) Math.ceil(distKm * 3);  // 3 min per km
 
-                ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to, conn);
+                ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
 
-                return new Segments(from, to, routeName, category, stopNames, stops, eta, (int) distKm, finalFare);
+                return new Segments(from, to, routeName, "Regular", stopNames, stops, eta, (int) distKm, fare);
             }
         }
     }
 
-    private boolean detectDirection(String from, String to, Connection conn) {
+    private boolean detectDirection(String from, String to) {
         String sql = """
             SELECT (rs_from.stop_order < rs_to.stop_order) AS is_outbound
             FROM Route_Stops rs_from
@@ -200,7 +207,7 @@ public class RouteManager {
               AND LOWER(st.stop_name) = LOWER(?)
             LIMIT 1;
             """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, from);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
@@ -212,7 +219,7 @@ public class RouteManager {
         return true;
     }
 
-    private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to, Connection conn) throws SQLException {
+    private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to) throws SQLException {
         from = normalize(from);
         to   = normalize(to);
         ArrayList<String> stops = new ArrayList<>();
@@ -225,14 +232,14 @@ public class RouteManager {
             """;
 
         int fromOrder = -1, toOrder = -1;
-        try (PreparedStatement pst = conn.prepareStatement(orderSql)) {
+        try (PreparedStatement pst = con.prepareStatement(orderSql)) {
             pst.setInt(1, routeId);
             pst.setString(2, from);
             try (ResultSet rs = pst.executeQuery()) {
                 if (rs.next()) fromOrder = getIntSafe(rs, "stop_order");
             }
         }
-        try (PreparedStatement pst = conn.prepareStatement(orderSql)) {
+        try (PreparedStatement pst = con.prepareStatement(orderSql)) {
             pst.setInt(1, routeId);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
@@ -252,7 +259,7 @@ public class RouteManager {
             ORDER BY rs.stop_order %s;
             """.formatted(asc ? "" : "DESC");
 
-        try (PreparedStatement pst = conn.prepareStatement(stopSql)) {
+        try (PreparedStatement pst = con.prepareStatement(stopSql)) {
             pst.setInt(1, routeId);
             pst.setInt(2, Math.min(fromOrder, toOrder));
             pst.setInt(3, Math.max(fromOrder, toOrder));
@@ -263,24 +270,14 @@ public class RouteManager {
         return stops;
     }
 
-    private double getDiscountRate(String category) {
-        if (category == null) return 0.0;
-        return switch (category.toLowerCase()) {
-            case "student", "pwd", "senior citizen" -> 0.20;
-            default -> 0.0;
-        };
-    }
-
     /* ====================== COMPOSITE: FULL ROUTES ====================== */
-    public ArrayList<RouteComponent> findRoutesWithTransfers(
-            String from, String to, String category, Connection conn) throws SQLException {
-
+    public ArrayList<RouteComponent> findRoutesWithTransfers(String from, String to) throws SQLException {
         from = normalize(from);
         to   = normalize(to);
         ArrayList<RouteComponent> allRoutes = new ArrayList<>();
 
         // === Direct Route ===
-        Segments direct = createSegment(from, to, category, conn);
+        Segments direct = createSegment(from, to);
         if (direct != null) {
             Routes route = new Routes(direct.getRoute() + " (Direct)");
             route.addSegment(direct);
@@ -303,15 +300,15 @@ public class RouteManager {
               AND rs_t2.stop_order   < rs_to.stop_order;
             """;
 
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, from);
             pst.setString(2, to);
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
                     String transfer = rs.getString("transfer_stop");
 
-                    Segments leg1 = createSegment(from, transfer, category, conn);
-                    Segments leg2 = createSegment(transfer, to, category, conn);
+                    Segments leg1 = createSegment(from, transfer);
+                    Segments leg2 = createSegment(transfer, to);
 
                     if (leg1 != null && leg2 != null) {
                         Routes route = new Routes(from + " to " + to + " via " + transfer);
