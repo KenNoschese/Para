@@ -35,12 +35,32 @@ public class LoginPage extends JPanel {
 
         ThemeManager themeManager = ThemeManager.getInstance();
 
+        // Main container with horizontal split
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(themeManager.getWhite());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
+
+        // Left side - Graphic panel (960x1080)
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setPreferredSize(new Dimension(960, 1080));
+        leftPanel.setBackground(themeManager.getWhite());
+
+        try {
+            // Load and display the city graphic
+            JLabel graphicLabel = Images.getInstance().getCityGraphic(960, 1080);
+            leftPanel.add(graphicLabel, BorderLayout.CENTER);
+        } catch (Exception e) {
+            System.err.println("Could not load citygraphic.png: " + e.getMessage());
+            // Fallback: show a colored panel if image not found
+            leftPanel.setBackground(new Color(240, 240, 240));
+        }
+
+        // Right side - Login form panel
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setBackground(themeManager.getWhite());
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 100, 50));
 
         JLabel logo = Images.getInstance().getParaLogoLabel(250, 250);
-        mainPanel.add(logo, BorderLayout.NORTH);
+        rightPanel.add(logo, BorderLayout.NORTH);
 
         JPanel formPanel = new JPanel(new BorderLayout());
         formPanel.setBackground(themeManager.getWhite());
@@ -96,7 +116,7 @@ public class LoginPage extends JPanel {
         orLabel.setForeground(themeManager.getGray());
         orLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Login button (actual login logic here)
+        // Login button
         RoundedButton loginButton = new RoundedButton("Login");
         loginButton.setArc(30, 30);
         loginButton.setMaximumSize(new Dimension(400, 45));
@@ -106,7 +126,6 @@ public class LoginPage extends JPanel {
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // ✅ Updated login logic that switches DB connection
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
@@ -128,13 +147,9 @@ public class LoginPage extends JPanel {
                             "✅ Login successful!\nWelcome, " + username,
                             "Login Success", JOptionPane.INFORMATION_MESSAGE);
 
-                    // Set logged-in user
                     DatabaseInstance.setLoggedInUser(username, null);
-
-                    // Confirm connection user
                     System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
 
-                    // Move to landing page
                     cardChanger.accept("LANDING");
                 } else {
                     JOptionPane.showMessageDialog(mainPanel,
@@ -151,7 +166,7 @@ public class LoginPage extends JPanel {
             }
         });
 
-        // Layout assembly
+        // Layout assembly for right panel
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(usernameField);
@@ -165,7 +180,11 @@ public class LoginPage extends JPanel {
         formContent.add(signUpButton);
 
         formPanel.add(formContent, BorderLayout.CENTER);
-        mainPanel.add(formPanel, BorderLayout.CENTER);
+        rightPanel.add(formPanel, BorderLayout.CENTER);
+
+        // Combine left and right panels
+        mainPanel.add(leftPanel, BorderLayout.WEST);
+        mainPanel.add(rightPanel, BorderLayout.CENTER);
 
         return mainPanel;
     }

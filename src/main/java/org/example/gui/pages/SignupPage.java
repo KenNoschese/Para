@@ -27,10 +27,18 @@ public class SignupPage extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(themeManager.getWhite());
-        setBorder(BorderFactory.createEmptyBorder(50, 0, 100, 0));
+
+        // Main container with horizontal split
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(themeManager.getWhite());
+
+        // Left side - Signup form panel
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setBackground(themeManager.getWhite());
+        leftPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 100, 50));
 
         JLabel logo = Images.getInstance().getParaLogoLabel(250, 250);
-        add(logo, BorderLayout.NORTH);
+        leftPanel.add(logo, BorderLayout.NORTH);
 
         JPanel formPanel = new JPanel(new BorderLayout());
         formPanel.setBackground(themeManager.getWhite());
@@ -74,7 +82,7 @@ public class SignupPage extends JPanel {
         confirmPassField.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Create Account Button
-        JButton createButton = getJButton(nameField, passField, confirmPassField);
+        JButton createButton = getJButton(nameField, passField, confirmPassField, themeManager);
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Back Button
@@ -91,7 +99,7 @@ public class SignupPage extends JPanel {
             cardChanger.accept("LOGIN");
         });
 
-        // Add all components to panel
+        // Add all components to form content
         formContent.add(titleLabel);
         formContent.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingLarge()));
         formContent.add(nameField);
@@ -105,12 +113,31 @@ public class SignupPage extends JPanel {
         formContent.add(backButton);
 
         formPanel.add(formContent, BorderLayout.CENTER);
-        add(formPanel, BorderLayout.CENTER);
+        leftPanel.add(formPanel, BorderLayout.CENTER);
+
+        // Right side - Graphic panel (960x1080)
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setPreferredSize(new Dimension(960, 1080));
+        rightPanel.setBackground(themeManager.getWhite());
+
+        try {
+            // Load and display the city graphic night
+            JLabel graphicLabel = Images.getInstance().getCityGraphicNight(960,1080);
+            rightPanel.add(graphicLabel, BorderLayout.CENTER);
+        } catch (Exception e) {
+            System.err.println("Could not load citygraphicnight.png: " + e.getMessage());
+            // Fallback: show a colored panel if image not found
+            rightPanel.setBackground(new Color(240, 240, 240));
+        }
+
+        // Combine left and right panels
+        mainPanel.add(leftPanel, BorderLayout.CENTER);
+        mainPanel.add(rightPanel, BorderLayout.EAST);
+
+        add(mainPanel, BorderLayout.CENTER);
     }
 
-    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField) {
-        ThemeManager themeManager = ThemeManager.getInstance();
-
+    private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField, ThemeManager themeManager) {
         RoundedButton createButton = new RoundedButton("Create Account");
         createButton.setArc(30, 30);
         createButton.setMaximumSize(new Dimension(400, 45));
@@ -137,6 +164,9 @@ public class SignupPage extends JPanel {
             System.out.println("📝 Signing up user: " + name + " | Password: " + password);
 
             new UserManager().signUpUser(name, password);
+
+            JOptionPane.showMessageDialog(this, "Account created successfully! Please log in.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            cardChanger.accept("Login");
         });
 
         return createButton;

@@ -204,4 +204,19 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
             themeManager.removeThemeChangeListener(this);
         }
     }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                JFrame f = new JFrame("landingPage Preview");
+                f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                Consumer<String> dummy = System.out::println;
+                LandingPage p = new LandingPage(dummy);
+                f.add(p);
+                f.setSize(1920, 1080);
+                f.setLocationRelativeTo(null);
+                f.setVisible(true);
+            } catch (Exception e) { e.printStackTrace(); }
+        });
+    }
 }

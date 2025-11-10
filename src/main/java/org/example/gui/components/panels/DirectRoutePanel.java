@@ -8,8 +8,17 @@ import org.example.gui.appManager.ThemeManager;
 import org.example.gui.components.base.RoundedPanel;
 import org.example.gui.resources.Fonts;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FontFormatException;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
@@ -125,11 +134,15 @@ public class DirectRoutePanel implements RoutePanel {
         panel.setOpaque(false);
         panel.setAlignmentY(Component.TOP_ALIGNMENT);
 
+        panel.setMinimumSize(new Dimension(200, 100));
+        panel.setMaximumSize(new Dimension(200, 100));
+
         try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
             ArrayList<RouteManager.JeepneyInfo> jeepneys =
                     routeManager.getJeepneysForRoute(routeData.getRoute(), conn);
 
             if (!jeepneys.isEmpty()) {
+                System.out.println("📊 Jeepneys found for route " + routeData.getRoute() + ": " + jeepneys.size());
                 JLabel header = new JLabel("Available Jeepneys:");
                 header.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 12));
                 header.setForeground(themeManager.getBlack());
@@ -148,6 +161,7 @@ public class DirectRoutePanel implements RoutePanel {
                     panel.add(more);
                 }
             } else {
+                System.out.println("no jeep");
                 JLabel noJeepneys = new JLabel("No jeepneys available");
                 noJeepneys.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 11));
                 noJeepneys.setForeground(themeManager.getGray());

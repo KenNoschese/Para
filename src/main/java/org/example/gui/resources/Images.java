@@ -14,6 +14,8 @@ public class Images {
     private static final ImageIcon routeImageIcon = new ImageIcon(IMAGES_PATH + "RouteImg.png");
     private static final ImageIcon routeOverviewIcon = new ImageIcon(IMAGES_PATH + "routeov.png");
     private static final ImageIcon placeholderIcon = new ImageIcon(IMAGES_PATH + "nodata.png");
+    private static final ImageIcon citygraphic = new ImageIcon(IMAGES_PATH + "citygraphic.png");
+    private static final ImageIcon citygraphicnight = new ImageIcon(IMAGES_PATH + "citygraphicnight.png");
 
     public ImageIcon getCityIcon() {
         return cityIcon;
@@ -41,6 +43,14 @@ public class Images {
 
     public JLabel getPlaceholderLabel(int width, int height) {
         return createImageLabel(placeholderIcon, width, height);
+    }
+
+    public JLabel getCityGraphic(int width, int height) {
+        return createImageLabel(citygraphic, width, height);
+    }
+
+    public JLabel getCityGraphicNight(int width, int height) {
+        return createImageLabel(citygraphicnight, width, height);
     }
 
     private JLabel createImageLabel(ImageIcon icon, int width, int height) {

@@ -6,6 +6,7 @@ import java.io.*;
 import java.sql.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javax.swing.*;
@@ -443,59 +444,40 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             throws IOException, FontFormatException, SQLException {
 
         JPanel panel = PanelFactory.create(null, 0, 0, 0);
-        panel.setLayout(new BorderLayout());
+        panel.setLayout(new BorderLayout(0, 10));
         panel.setOpaque(false);
 
+        // Title label
         JLabel titleLabel = LabelFactory.create(
                 title,
                 loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
-                themeManager.getWhite()
+                themeManager.getBlack()
         );
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 0));
 
-        DefaultTableModel model = new DefaultTableModel(new Object[]{"Location"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+        // Location selection callback
+        BiConsumer<String, Boolean> onLocationSelected = (location, from) -> {
+            if (from) {
+                currentLocation.setText(location);
+            } else {
+                destination.setText(location);
+            }
+
+            // Auto-search if both fields are filled
+            if (!currentLocation.getText().trim().isEmpty() &&
+                    !destination.getText().trim().isEmpty()) {
+                SwingUtilities.invokeLater(() -> searchRoutes());
+            }
         };
 
-        JTable table = new JTable(model);
-        table.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 12f));
-        table.setRowHeight(28);
-        table.setShowGrid(false);
-        table.setFillsViewportHeight(true);
-        table.getTableHeader().setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 12f));
-        table.getTableHeader().setBackground(themeManager.getBlue().darker());
-        table.getTableHeader().setForeground(themeManager.getWhite());
-        table.setSelectionBackground(themeManager.getYellow());
-        table.setSelectionForeground(themeManager.getBlack());
+        // Create table using manager
+        JTable table = pageManager.createLocationTable(
+                onLocationSelected,
+                isFrom
+        );
 
-        List<String> stopNames = pageManager.getAllStopNames();
-        for (String stop : stopNames) {
-            model.addRow(new Object[]{stop});
-        }
-
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int row = table.rowAtPoint(e.getPoint());
-                if (row >= 0) {
-                    String selected = (String) model.getValueAt(row, 0);
-                    if (isFrom) {
-                        currentLocation.setText(selected);
-                    } else {
-                        destination.setText(selected);
-                    }
-                    if (!currentLocation.getText().trim().isEmpty() &&
-                            !destination.getText().trim().isEmpty()) {
-                        SwingUtilities.invokeLater(() -> searchRoutes());
-                    }
-                }
-            }
-        });
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createLineBorder(themeManager.getWhite(), 1));
-        scrollPane.getViewport().setBackground(themeManager.getWhite());
+        // Create styled scroll pane
+        JScrollPane scrollPane = pageManager.createTableScrollPane(table, themeManager);
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);

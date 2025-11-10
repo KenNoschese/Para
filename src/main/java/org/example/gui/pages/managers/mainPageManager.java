@@ -6,9 +6,23 @@ import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.DatabaseManager.RouteDatabase.Routes;
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
 import org.example.DatabaseManager.DatabaseInstance;
+import org.example.gui.appManager.ThemeManager;
+import org.example.gui.resources.Fonts;
 
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.List;
+import java.util.function.BiConsumer;
+
+import static org.example.gui.resources.Fonts.*;
 
 public class mainPageManager {
 
@@ -219,6 +233,152 @@ public class mainPageManager {
         } else {
             return new ArrayList<>(java.util.List.of(route));
         }
+    }
+
+    public JTable createLocationTable( BiConsumer<String, Boolean> onLocationSelected,
+            boolean isFrom) throws SQLException, IOException, FontFormatException {
+
+        // Custom table model
+        DefaultTableModel model = new DefaultTableModel(new Object[]{"Location"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        // Create and configure table
+        JTable table = new JTable(model);
+        table.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 13));
+        table.setRowHeight(35);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setFillsViewportHeight(true);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Enhanced colors with better contrast
+        table.setBackground(Color.WHITE);
+        table.setForeground(ThemeManager.getInstance().getBlack());
+        table.setSelectionBackground(ThemeManager.getInstance().getYellow());
+        table.setSelectionForeground(ThemeManager.getInstance().getBlack());
+        table.setGridColor(new Color(240, 240, 240));
+
+        table.setTableHeader(null);
+
+        // Custom cell renderer with alternating colors
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                if (c instanceof JLabel) {
+                    JLabel label = (JLabel) c;
+                    label.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+
+                    // Alternating row colors for better readability
+                    if (!isSelected) {
+                        if (row % 2 == 0) {
+                            label.setBackground(Color.WHITE);
+                        } else {
+                            label.setBackground(new Color(248, 248, 248));
+                        }
+                    } else {
+                        label.setBackground(ThemeManager.getInstance().getYellow());
+                        label.setForeground(ThemeManager.getInstance().getBlack());
+                        try {
+                            label.setFont(Fonts.loadCustomFont(DM_SANS_BOLD, 13));
+                        } catch (Exception e) {
+                            // Fallback to regular font
+                        }
+                    }
+                }
+
+                return c;
+            }
+        });
+
+        // Populate table
+        List<String> stopNames = getAllStopNames();
+        for (String stop : stopNames) {
+            model.addRow(new Object[]{stop});
+        }
+
+        // Mouse interaction
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    String selected = (String) model.getValueAt(row, 0);
+                    onLocationSelected.accept(selected, isFrom);
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                table.setCursor(Cursor.getDefaultCursor());
+            }
+        });
+
+        // Hover effect
+        table.addMouseMotionListener(new MouseMotionAdapter() {
+            private int lastRow = -1;
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != lastRow) {
+                    lastRow = row;
+                    table.repaint();
+                }
+            }
+        });
+
+        return table;
+    }
+
+    public JScrollPane createTableScrollPane(JTable table, Object themeManager) {
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInstance().getWhite().darker(), 2),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setBackground(Color.WHITE);
+
+        // Style scrollbar
+        scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
+        scrollPane.getVerticalScrollBar().setBackground(new Color(240, 240, 240));
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = ThemeManager.getInstance().getBlue().brighter();
+                this.trackColor = new Color(240, 240, 240);
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            private JButton createZeroButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                return button;
+            }
+        });
+
+        return scrollPane;
     }
 
     private RouteComponent wrapInComposite(List<RouteComponent> segments) {
