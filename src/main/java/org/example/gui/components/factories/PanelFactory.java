@@ -1,4 +1,4 @@
-package org.example.gui.components.Factories;
+package org.example.gui.components.factories;
 
 import java.awt.Color;
 import java.awt.Dimension;

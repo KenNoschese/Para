@@ -24,7 +24,7 @@ import java.util.function.BiConsumer;
 
 import static org.example.gui.resources.Fonts.*;
 
-public class mainPageManager {
+public class MainPageManager {
 
     // ──────────────────────────────────────────────────────────────
     // SAFE DB READERS
@@ -44,7 +44,7 @@ public class mainPageManager {
     private final ArrayList<RouteComponent> savedRoutes;
     private String currentFilter = "all";
 
-    public mainPageManager() {
+    public MainPageManager() {
         this.savedRoutes = new ArrayList<>();
     }
 

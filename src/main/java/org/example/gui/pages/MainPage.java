@@ -10,7 +10,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
@@ -18,16 +17,19 @@ import org.example.DatabaseManager.RouteDatabase.RouteManager;
 import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.DatabaseManager.RouteDatabase.Routes;
 import org.example.gui.appManager.*;
-import org.example.gui.components.Factories.*;
-import org.example.gui.components.Factories.RoutePanelFactory.DirectRouteFactory;
-import org.example.gui.components.Factories.RoutePanelFactory.RouteFactory;
-import org.example.gui.components.Factories.RoutePanelFactory.TransferRouteFactory;
+import org.example.gui.components.dialogs.ConfirmDialog;
+import org.example.gui.components.dialogs.SuccessDialog;
+import org.example.gui.components.factories.*;
+import org.example.gui.components.factories.RoutePanelFactory.DirectRouteFactory;
+import org.example.gui.components.factories.RoutePanelFactory.RouteFactory;
+import org.example.gui.components.factories.RoutePanelFactory.TransferRouteFactory;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedPanel;
 import org.example.gui.components.base.RoundedTextField;
 import org.example.gui.components.elements.UserButton;
 import org.example.gui.components.panels.RoutePanel;
-import org.example.gui.pages.managers.mainPageManager;
+import org.example.gui.pages.managers.StateManager;
+import org.example.gui.pages.managers.MainPageManager;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.Fonts;
 
@@ -49,10 +51,11 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private RoundedPanel savedPanel;
     private JLabel savedLabel;
     private JLabel wcQuestion;
-    private mainPageManager pageManager;
+    private MainPageManager pageManager;
     private ButtonGroup filterButtonGroup;
     private RouteManager routeManager;
-    private ArrayList<RouteComponent> displayedRoute; // ← FIXED: Now RouteComponent
+    private ArrayList<RouteComponent> displayedRoute;
+    private StateManager stateManager;
 
     public MainPage(Consumer<String> cardChanger) throws IOException, FontFormatException, SQLException {
         this.cardChanger = cardChanger;
@@ -62,8 +65,9 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
     }
 
     private void setupPanel() throws IOException, FontFormatException, SQLException {
-        this.pageManager = new mainPageManager();
+        this.pageManager = new MainPageManager();
         this.routeManager = new RouteManager();
+        this.stateManager = new StateManager();
         routeManager.addJeepneyObserver(new UIRefreshObserver());
         setLayout(new BorderLayout());
         setPreferredSize(SizeManager.getInstance().flexibleWidth(1920, 1080));
@@ -534,7 +538,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             String from = currentLocation.getText().trim();
             String to = destination.getText().trim();
 
-            mainPageManager.SearchResult result = pageManager.searchRoutes(from, to);
+            MainPageManager.SearchResult result = pageManager.searchRoutes(from, to);
 
             if (!result.isSuccess()) {
                 JOptionPane.showMessageDialog(this,
@@ -746,44 +750,41 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             @Override public void mouseClicked(MouseEvent e) {
                 setSavedRoutes(route);
             }
-            @Override public void mouseEntered(MouseEvent e) { save.setBackground(themeManager.getBlue()); }
-            @Override public void mouseExited(MouseEvent e) { save.setBackground(themeManager.getYellow()); }
+            @Override public void mouseEntered(MouseEvent e) {
+                save.setBackground(themeManager.getBlue());
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                save.setBackground(themeManager.getYellow());
+            }
         });
 
         RoundedButton take = ButtonFactory.create(
-                "Take Route",
+                stateManager.isInTransit() ? "Complete Trip" : "Take Route",
                 loadCustomFont(Fonts.DM_SANS_BOLD, 13f),
                 themeManager.getGreen(),
                 themeManager.getWhite(),
                 180, 40,
                 SizeManager.getInstance().getBorderRadiusLarge()
         );
+
         take.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
-                    ArrayList<RouteManager.JeepneyInfo> jeepneys = routeManager.getJeepneysForRoute(route.getRoute(), conn);
-                    if (jeepneys.isEmpty()) {
-                        JOptionPane.showMessageDialog(MainPage.this, "No jeepneys on this route.", "No Jeepneys", JOptionPane.WARNING_MESSAGE);
-                        return;
-                    }
-                    RouteManager.JeepneyInfo available = jeepneys.stream().filter(j -> !j.isFull()).findFirst().orElse(null);
-                    if (available == null) {
-                        JOptionPane.showMessageDialog(MainPage.this, "All jeepneys full.", "Full", JOptionPane.WARNING_MESSAGE);
-                        return;
-                    }
-                    routeManager.boardJeepney(available.getPlateNumber(), conn);
-                    JOptionPane.showMessageDialog(MainPage.this,
-                            "Boarded " + available.getPlateNumber() + "!\nPassengers: " + (available.getCurrentPassengers() + 1) + "/" + available.getCapacity(),
-                            "Success", JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(MainPage.this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (stateManager.isInTransit()) {
+                    handleCompleteTrip();
+                } else {
+                    handleTakeRoute(route);
                 }
             }
-            @Override public void mouseEntered(MouseEvent e) {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
                 take.setBackground(themeManager.getWhite());
                 take.setForeground(themeManager.getGreen());
             }
-            @Override public void mouseExited(MouseEvent e) {
+
+            @Override
+            public void mouseExited(MouseEvent e) {
                 take.setBackground(themeManager.getGreen());
                 take.setForeground(themeManager.getWhite());
             }
@@ -792,6 +793,276 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         p.add(save);
         p.add(take);
         return p;
+    }
+
+    // NEW: Handle taking a route
+    private void handleTakeRoute(RouteComponent route) {
+        Connection conn = null;
+        try {
+            conn = DatabaseInstance.getInstance().getConnection();
+
+            // Get available jeepneys
+            ArrayList<RouteManager.JeepneyInfo> jeepneys =
+                    routeManager.getJeepneysForRoute(route.getRoute(), conn);
+
+            if (jeepneys.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "No jeepneys available on this route.",
+                        "No Jeepneys",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Find available jeepney
+            RouteManager.JeepneyInfo available = jeepneys.stream()
+                    .filter(j -> !j.isFull())
+                    .findFirst()
+                    .orElse(null);
+
+            if (available == null) {
+                JOptionPane.showMessageDialog(this,
+                        "All jeepneys are full on this route.",
+                        "Route Full",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Board the jeepney (this will trigger observer notifications)
+            routeManager.boardJeepney(available.getPlateNumber(), conn);
+
+            // Update trip state
+            stateManager.startTrip(
+                    route,
+                    available,
+                    route.getFromLocation(),
+                    route.getDestination()
+            );
+
+            // Show in-transit UI
+            displayInTransitView();
+
+            SuccessDialog.show(this,
+                    String.format("Successfully boarded %s!<br>Passengers: %d/%d<br>Enjoy your ride!",
+                            available.getPlateNumber(),
+                            available.getCurrentPassengers() + 1,
+                            available.getCapacity()),
+                    "Boarding Successful");
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error boarding jeepney: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private void handleCompleteTrip() {
+        StateManager.ActiveTrip trip = stateManager.getActiveTrip();
+
+        if (trip == null) return;
+
+        boolean confirmed = ConfirmDialog.show(this,
+                "<html>Complete trip on <b>" + trip.getJeepney().getPlateNumber() +
+                        "</b>?<br>You've been traveling for <b>" + trip.getMinutesInTransit() +
+                        " minutes</b>.</html>",
+                "Complete Trip");
+
+        if (confirmed) {
+            try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+                // Leave jeepney
+                routeManager.leaveJeepney(trip.getJeepney().getPlateNumber(), conn);
+
+                // Mark trip as completed
+                stateManager.completeTrip();
+
+                // Show trip summary
+                displayTripSummary(trip);
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Error completing trip: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void displayInTransitView() {
+        StateManager.ActiveTrip trip = stateManager.getActiveTrip();
+        if (trip == null) return;
+
+        infoPanel.removeAll();
+        infoPanel.setLayout(new BorderLayout());
+        infoPanel.setBackground(themeManager.getGreen().brighter());
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
+
+        try {
+            JPanel content = PanelFactory.create(null, 0, 0, 0);
+            content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+            content.setOpaque(false);
+
+            // Header
+            JLabel header = LabelFactory.create(
+                    "🚍 Trip in Progress",
+                    loadCustomFont(Fonts.DM_SANS_BOLD, 24f),
+                    themeManager.getBlack()
+            );
+            header.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            // Route info
+            JPanel routeInfo = PanelFactory.create(
+                    themeManager.getWhite(),
+                    0, 0,
+                    SizeManager.getInstance().getBorderRadiusLarge()
+            );
+            routeInfo.setLayout(new BoxLayout(routeInfo, BoxLayout.Y_AXIS));
+            routeInfo.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            routeInfo.add(createInfoRow("Route:", trip.getRoute().getRoute()));
+            routeInfo.add(Box.createVerticalStrut(10));
+            routeInfo.add(createInfoRow("From:", trip.getFromLocation()));
+            routeInfo.add(Box.createVerticalStrut(10));
+            routeInfo.add(createInfoRow("To:", trip.getToLocation()));
+            routeInfo.add(Box.createVerticalStrut(10));
+            routeInfo.add(createInfoRow("Jeepney:", trip.getJeepney().getPlateNumber()));
+            routeInfo.add(Box.createVerticalStrut(10));
+            routeInfo.add(createInfoRow("Expected Time:", trip.getRoute().getEta() + " min"));
+            routeInfo.add(Box.createVerticalStrut(10));
+            routeInfo.add(createInfoRow("Fare:", "Php " + String.format("%.2f", trip.getRoute().getFare())));
+
+            // Complete button
+            RoundedButton completeBtn = ButtonFactory.create(
+                    "Complete Trip",
+                    loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
+                    themeManager.getBlack(),
+                    themeManager.getWhite(),
+                    200, 45,
+                    SizeManager.getInstance().getBorderRadiusLarge()
+            );
+            completeBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            completeBtn.addActionListener(e -> handleCompleteTrip());
+
+            content.add(header);
+            content.add(Box.createVerticalStrut(20));
+            content.add(routeInfo);
+            content.add(Box.createVerticalStrut(30));
+            content.add(completeBtn);
+            content.add(Box.createVerticalGlue());
+
+            infoPanel.add(content, BorderLayout.CENTER);
+
+        } catch (Exception e) {
+            setInfoMessage("Error displaying trip info.");
+        }
+
+        infoPanel.revalidate();
+        infoPanel.repaint();
+
+        // Disable route searching while in transit
+        currentLocation.setEnabled(false);
+        destination.setEnabled(false);
+        submitButton.setEnabled(false);
+    }
+
+    // NEW: Helper to create info rows
+    private JPanel createInfoRow(String label, String value) throws IOException, FontFormatException {
+        JPanel row = PanelFactory.create(null, 0, 0, 0);
+        row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
+        row.setOpaque(false);
+
+        JLabel labelComp = LabelFactory.create(
+                label + " ",
+                loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
+                themeManager.getBlack()
+        );
+
+        JLabel valueComp = LabelFactory.create(
+                value,
+                loadCustomFont(Fonts.DM_SANS_REGULAR, 14f),
+                themeManager.getBlack().brighter()
+        );
+
+        row.add(labelComp);
+        row.add(valueComp);
+        row.add(Box.createHorizontalGlue());
+
+        return row;
+    }
+
+    // NEW: Display trip summary after completion
+    private void displayTripSummary(StateManager.ActiveTrip trip) {
+        infoPanel.removeAll();
+        infoPanel.setLayout(new BorderLayout());
+        infoPanel.setBackground(themeManager.getBlue());
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
+
+        try {
+            JPanel content = PanelFactory.create(null, 0, 0, 0);
+            content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+            content.setOpaque(false);
+
+            JLabel header = LabelFactory.create(
+                    "✓ Trip Completed!",
+                    loadCustomFont(Fonts.DM_SANS_BOLD, 24f),
+                    themeManager.getBlack()
+            );
+            header.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+            JPanel summary = PanelFactory.create(
+                    themeManager.getWhite(),
+                    0, 0,
+                    SizeManager.getInstance().getBorderRadiusLarge()
+            );
+            summary.setLayout(new BoxLayout(summary, BoxLayout.Y_AXIS));
+            summary.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+            summary.add(createInfoRow("Route:", trip.getRoute().getRoute()));
+            summary.add(Box.createVerticalStrut(10));
+            summary.add(createInfoRow("Duration:", trip.getMinutesInTransit() + " minutes"));
+            summary.add(Box.createVerticalStrut(10));
+            summary.add(createInfoRow("Fare Paid:", "Php " + String.format("%.2f", trip.getRoute().getFare())));
+
+            RoundedButton newSearchBtn = ButtonFactory.create(
+                    "Search New Route",
+                    loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
+                    themeManager.getGreen(),
+                    themeManager.getWhite(),
+                    200, 45,
+                    SizeManager.getInstance().getBorderRadiusLarge()
+            );
+            newSearchBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            newSearchBtn.addActionListener(e -> {
+                stateManager.returnToBrowsing();
+                currentLocation.setEnabled(true);
+                destination.setEnabled(true);
+                submitButton.setEnabled(true);
+                setInfoMessage("No chosen route.");
+            });
+
+            content.add(header);
+            content.add(Box.createVerticalStrut(20));
+            content.add(summary);
+            content.add(Box.createVerticalStrut(30));
+            content.add(newSearchBtn);
+            content.add(Box.createVerticalGlue());
+
+            infoPanel.add(content, BorderLayout.CENTER);
+
+        } catch (Exception e) {
+            setInfoMessage("Trip completed.");
+        }
+
+        infoPanel.revalidate();
+        infoPanel.repaint();
     }
 
     // --------------------- TRANSFER ROUTE INFO ---------------------
@@ -807,7 +1078,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
             content.setOpaque(false);
 
-            mainPageManager.RouteDetails details = pageManager.calculateTransferMetrics(segments.get(0));
+            MainPageManager.RouteDetails details = pageManager.calculateTransferMetrics(segments.get(0));
 
             JPanel header = PanelFactory.create(null, 0, 0, 0);
             header.setLayout(new BoxLayout(header, BoxLayout.X_AXIS));
@@ -850,7 +1121,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         infoPanel.repaint();
     }
 
-    private JPanel createTransferSummarySection(mainPageManager.RouteDetails details) throws IOException, FontFormatException {
+    private JPanel createTransferSummarySection(MainPageManager.RouteDetails details) throws IOException, FontFormatException {
         JPanel sec = PanelFactory.create(null, 0, 0, 0);
         sec.setLayout(new BoxLayout(sec, BoxLayout.Y_AXIS));
         sec.setOpaque(false);
@@ -1040,7 +1311,19 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
     private class UIRefreshObserver implements JeepneyObserver {
         @Override
         public void update(String plateNumber, int currentPassengers, int capacity) {
-            SwingUtilities.invokeLater(MainPage.this::refreshCurrentRouteInfo);
+            SwingUtilities.invokeLater(() -> {
+                // Refresh route panels if browsing
+                if (stateManager.isBrowsing()) {
+                    refreshCurrentRouteInfo();
+                }
+
+                // Update in-transit view if the user is on this jeepney
+                if (stateManager.isInTransit() &&
+                        stateManager.getActiveTrip().getJeepney().getPlateNumber().equals(plateNumber)) {
+                    // Optionally refresh the in-transit display
+                    displayInTransitView();
+                }
+            });
         }
     }
 

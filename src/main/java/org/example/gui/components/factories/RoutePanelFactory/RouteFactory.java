@@ -1,4 +1,4 @@
-package org.example.gui.components.Factories.RoutePanelFactory;
+package org.example.gui.components.factories.RoutePanelFactory;
 
 import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.gui.components.panels.RoutePanel;
