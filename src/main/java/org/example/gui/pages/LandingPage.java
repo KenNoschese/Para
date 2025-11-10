@@ -2,6 +2,7 @@ package org.example.gui.pages;
 
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.appManager.SizeManager;
+import org.example.gui.components.Factories.*;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedPanel;
 import org.example.gui.components.elements.StepPanel;
@@ -25,7 +26,6 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     private RoundedPanel infoContainer;
     private JPanel infoTextPanel;
     private RoundedButton startButton;
-    private Images img;
 
     public LandingPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;
@@ -50,10 +50,8 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     }
 
     private JPanel createCenterPanel() throws IOException, FontFormatException {
-        JPanel center = new JPanel();
-        center.setBackground(themeManager.getBackgroundColor());
-        JPanel contentPane = new JPanel();
-        contentPane.setBackground(themeManager.getBackgroundColor());
+        JPanel center = PanelFactory.create(themeManager.getBackgroundColor(), 0, 0, 0);
+        JPanel contentPane = PanelFactory.create(themeManager.getBackgroundColor(), 0, 0, 0);
         contentPane.setPreferredSize(SizeManager.getInstance().getContentPaneSize());
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
 
@@ -83,24 +81,25 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     }
 
     private JPanel createInfoTextPanel() throws IOException, FontFormatException {
-        infoTextPanel = new JPanel();
-        infoTextPanel.setBackground(themeManager.getYellow());
+        infoTextPanel = PanelFactory.create(themeManager.getYellow(), 0, 0, 0);
         infoTextPanel.setLayout(new BoxLayout(infoTextPanel, BoxLayout.Y_AXIS));
         infoTextPanel.putClientProperty("themeColor", "yellow");
 
-        JLabel welcomeText = new JLabel("Welcome to Para!");
-        welcomeText.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 16f));
-        welcomeText.setForeground(themeManager.getGreen());
+        JLabel welcomeText = LabelFactory.create("Welcome to Para!",
+                loadCustomFont(Fonts.DM_SANS_ITALIC, 16f),
+                themeManager.getGreen());
 
         JLabel heading = new JLabel("<html>Your smart companion for navigating Davao<br>City's Jeepney routes.</html>");
         heading.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 22f));
         heading.setForeground(themeManager.getForegroundColor());
+        heading.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel bullet = new JLabel("<html>✅ Complete jeepney route database<br><br>" +
                 "✅ Step-by-step travel instructions.<br><br>" +
                 "✅ Easy-to-use interface for all commuters</html>");
         bullet.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
         bullet.setForeground(themeManager.getForegroundColor());
+        bullet.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         startButton = createStartButton();
 
@@ -116,11 +115,10 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     }
 
     private RoundedButton createStartButton() throws IOException, FontFormatException {
-        startButton = new RoundedButton("Start Now!");
-        startButton.setArc(20, 20);
-        startButton.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
-        startButton.setBackground(themeManager.getRed());
-        startButton.setForeground(themeManager.getPink());
+        startButton = ButtonFactory.create("Start Now!",
+                loadCustomFont(Fonts.DM_SANS_REGULAR, 16f),
+                themeManager.getRed(), themeManager.getPink(),
+                200, 40, 20);
         startButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         startButton.putClientProperty("themeColor", "red");
 
@@ -143,16 +141,14 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     }
 
     private JLabel createHowToUseLabel() throws IOException, FontFormatException {
-        JLabel howText = new JLabel("How to use?");
-        howText.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 18f));
-        howText.setAlignmentX(Component.CENTER_ALIGNMENT);
-        howText.setForeground(themeManager.getForegroundColor());
+        JLabel howText = LabelFactory.create("How to use?",
+                loadCustomFont(Fonts.DM_SANS_BOLD, 18f),
+                themeManager.getForegroundColor());
         return howText;
     }
 
     private JPanel createInstructionContainer() throws IOException, FontFormatException {
-        JPanel instructContainer = new JPanel();
-        instructContainer.setBackground(themeManager.getBackgroundColor());
+        JPanel instructContainer = PanelFactory.create(themeManager.getBackgroundColor(), 0, 0, 0);
         instructContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
         instructContainer.setPreferredSize(new Dimension(1000, 350));
 

@@ -2,10 +2,11 @@ package org.example.gui.pages;
 
 import org.example.DatabaseManager.UserDatabase.UserManager;
 import org.example.gui.appManager.ThemeManager;
+import org.example.gui.appManager.SizeManager;
+import org.example.gui.components.Factories.*;
 import org.example.gui.components.base.RoundedPasswordField;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.Fonts;
-import org.example.gui.appManager.SizeManager;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedTextField;
 
@@ -29,37 +30,33 @@ public class SignupPage extends JPanel {
         setBackground(themeManager.getWhite());
 
         // Main container with horizontal split
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(themeManager.getWhite());
+        JPanel mainPanel = PanelFactory.create(themeManager.getWhite(), 0, 0, 0);
+        mainPanel.setLayout(new BorderLayout());
 
         // Left side - Signup form panel
-        JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.setBackground(themeManager.getWhite());
+        JPanel leftPanel = PanelFactory.create(themeManager.getWhite(), 0, 0, 0);
+        leftPanel.setLayout(new BorderLayout());
         leftPanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 100, 50));
 
         JLabel logo = Images.getInstance().getParaLogoLabel(250, 250);
         leftPanel.add(logo, BorderLayout.NORTH);
 
-        JPanel formPanel = new JPanel(new BorderLayout());
-        formPanel.setBackground(themeManager.getWhite());
+        JPanel formPanel = PanelFactory.create(themeManager.getWhite(), 0, 0, 0);
+        formPanel.setLayout(new BorderLayout());
 
         JPanel formContent = new JPanel();
         formContent.setLayout(new BoxLayout(formContent, BoxLayout.Y_AXIS));
         formContent.setBackground(themeManager.getWhite());
 
-        JLabel titleLabel = new JLabel("Create Your Account", SwingConstants.CENTER);
-        titleLabel.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_BOLD, 18f));
-        titleLabel.setForeground(themeManager.getBlack());
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel titleLabel = LabelFactory.create("Create Your Account",
+                Fonts.loadCustomFont(Fonts.DM_SANS_BOLD, 18f),
+                themeManager.getBlack());
 
         // Name Field
-        RoundedTextField nameField = new RoundedTextField(20);
-        nameField.setMaximumSize(new Dimension(400, 45));
-        nameField.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
-        nameField.setForeground(themeManager.getBlack());
-        nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        RoundedTextField nameField = TextfieldFactory.create("Name", 400, 45, 20,
+                Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f),
+                themeManager.getWhite(), themeManager.getBlack());
         nameField.setBorderColor(themeManager.getGray());
-        nameField.setPlaceholder("Name");
 
         // Password Field
         RoundedPasswordField passField = new RoundedPasswordField(20);
@@ -86,14 +83,11 @@ public class SignupPage extends JPanel {
         createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Back Button
-        RoundedButton backButton = new RoundedButton("Back to Login");
-        backButton.setArc(30, 30);
-        backButton.setMaximumSize(new Dimension(400, 45));
-        backButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f));
-        backButton.setForeground(themeManager.getWhite());
-        backButton.setBackground(themeManager.getRed());
+        RoundedButton backButton = ButtonFactory.create("Back to Login",
+                Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f),
+                themeManager.getRed(), themeManager.getWhite(),
+                400, 45, 30);
         backButton.setBorder(BorderFactory.createEmptyBorder());
-        backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         backButton.addActionListener(e -> {
             System.out.println("↩️ Returning to Login Page");
             cardChanger.accept("LOGIN");
@@ -138,12 +132,18 @@ public class SignupPage extends JPanel {
     }
 
     private JButton getJButton(JTextField nameField, JTextField passField, JTextField confirmPassField, ThemeManager themeManager) {
-        RoundedButton createButton = new RoundedButton("Create Account");
-        createButton.setArc(30, 30);
-        createButton.setMaximumSize(new Dimension(400, 45));
-        try { createButton.setFont(Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f)); } catch (Exception ignored) {}
-        createButton.setForeground(themeManager.getWhite());
-        createButton.setBackground(themeManager.getBlack());
+        RoundedButton createButton;
+        try {
+            createButton = ButtonFactory.create("Create Account",
+                    Fonts.loadCustomFont(Fonts.DM_SANS_REGULAR, 16f),
+                    themeManager.getBlack(), themeManager.getWhite(),
+                    400, 45, 30);
+        } catch (Exception e) {
+            createButton = ButtonFactory.create("Create Account",
+                    new Font("Arial", Font.PLAIN, 16),
+                    themeManager.getBlack(), themeManager.getWhite(),
+                    400, 45, 30);
+        }
         createButton.setBorder(BorderFactory.createEmptyBorder());
 
         createButton.addActionListener(e -> {
