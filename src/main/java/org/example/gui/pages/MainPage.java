@@ -62,6 +62,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         this.themeManager = ThemeManager.getInstance();
         this.themeManager.addThemeChangeListener(this);
         setupPanel();
+        refreshSavedRoutesPanel(); // ← Load saved routes on login
     }
 
     private void setupPanel() throws IOException, FontFormatException, SQLException {
@@ -451,7 +452,6 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         panel.setLayout(new BorderLayout(0, 10));
         panel.setOpaque(false);
 
-        // Title label
         JLabel titleLabel = LabelFactory.create(
                 title,
                 loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
@@ -459,33 +459,23 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         );
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 0));
 
-        // Location selection callback
         BiConsumer<String, Boolean> onLocationSelected = (location, from) -> {
             if (from) {
                 currentLocation.setText(location);
             } else {
                 destination.setText(location);
             }
-
-            // Auto-search if both fields are filled
             if (!currentLocation.getText().trim().isEmpty() &&
                     !destination.getText().trim().isEmpty()) {
-                SwingUtilities.invokeLater(() -> searchRoutes());
+                SwingUtilities.invokeLater(this::searchRoutes);
             }
         };
 
-        // Create table using manager
-        JTable table = pageManager.createLocationTable(
-                onLocationSelected,
-                isFrom
-        );
-
-        // Create styled scroll pane
+        JTable table = pageManager.createLocationTable(onLocationSelected, isFrom);
         JScrollPane scrollPane = pageManager.createTableScrollPane(table, themeManager);
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
-
         return panel;
     }
 
@@ -579,7 +569,6 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         }
     }
 
-    // --------------------- DISPLAY ALL ROUTES ---------------------
     private void displayAllRoutes(ArrayList<RouteComponent> routes, String from, String to)
             throws Exception {
         clearRouteContainer();
@@ -596,21 +585,12 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             routeContainer.add(Box.createVerticalStrut(50));
         } else {
             for (RouteComponent route : routes) {
-                // Get appropriate factory based on route type
                 RouteFactory factory = getFactory(route);
-
-                // Factory creates the appropriate panel (Factory Method)
-                RoutePanel routePanel = factory.createRoutePanel(
-                        route,
-                        this::handleRouteClick
-                );
-
-                // Add panel to container
+                RoutePanel routePanel = factory.createRoutePanel(route, this::handleRouteClick);
                 JPanel panel = routePanel.getPanel();
                 panel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 routeContainer.add(panel);
-                routeContainer.add(Box.createVerticalStrut(
-                        SizeManager.getInstance().getSpacingSmall()));
+                routeContainer.add(Box.createVerticalStrut(SizeManager.getInstance().getSpacingSmall()));
             }
         }
         routeContainer.revalidate();
@@ -628,14 +608,9 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
     }
 
     private RouteFactory getFactory(RouteComponent route) {
-        if (route instanceof Routes) {
-            return new TransferRouteFactory();
-        } else {
-            return new DirectRouteFactory();
-        }
+        return (route instanceof Routes) ? new TransferRouteFactory() : new DirectRouteFactory();
     }
 
-    // --------------------- SINGLE ROUTE INFO ---------------------
     private void displayRouteInfo(RouteComponent route) {
         displayedRoute = new ArrayList<>(List.of(route));
         infoPanel.removeAll();
@@ -768,8 +743,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         );
 
         take.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
+            @Override public void mouseClicked(MouseEvent e) {
                 if (stateManager.isInTransit()) {
                     handleCompleteTrip();
                 } else {
@@ -777,14 +751,12 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 }
             }
 
-            @Override
-            public void mouseEntered(MouseEvent e) {
+            @Override public void mouseEntered(MouseEvent e) {
                 take.setBackground(themeManager.getWhite());
                 take.setForeground(themeManager.getGreen());
             }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
+            @Override public void mouseExited(MouseEvent e) {
                 take.setBackground(themeManager.getGreen());
                 take.setForeground(themeManager.getWhite());
             }
@@ -795,50 +767,27 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         return p;
     }
 
-    // NEW: Handle taking a route
     private void handleTakeRoute(RouteComponent route) {
-        Connection conn = null;
-        try {
-            conn = DatabaseInstance.getInstance().getConnection();
-
-            // Get available jeepneys
-            ArrayList<RouteManager.JeepneyInfo> jeepneys =
-                    routeManager.getJeepneysForRoute(route.getRoute());
+        try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+            ArrayList<RouteManager.JeepneyInfo> jeepneys = routeManager.getJeepneysForRoute(route.getRoute());
 
             if (jeepneys.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "No jeepneys available on this route.",
-                        "No Jeepneys",
-                        JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "No jeepneys available on this route.", "No Jeepneys", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Find available jeepney
             RouteManager.JeepneyInfo available = jeepneys.stream()
                     .filter(j -> !j.isFull())
                     .findFirst()
                     .orElse(null);
 
             if (available == null) {
-                JOptionPane.showMessageDialog(this,
-                        "All jeepneys are full on this route.",
-                        "Route Full",
-                        JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "All jeepneys are full on this route.", "Route Full", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // Board the jeepney (this will trigger observer notifications)
             routeManager.boardJeepney(available.getPlateNumber());
-
-            // Update trip state
-            stateManager.startTrip(
-                    route,
-                    available,
-                    route.getFromLocation(),
-                    route.getDestination()
-            );
-
-            // Show in-transit UI
+            stateManager.startTrip(route, available, route.getFromLocation(), route.getDestination());
             displayInTransitView();
 
             SuccessDialog.show(this,
@@ -849,25 +798,13 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     "Boarding Successful");
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error boarding jeepney: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error boarding jeepney: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
 
     private void handleCompleteTrip() {
         StateManager.ActiveTrip trip = stateManager.getActiveTrip();
-
         if (trip == null) return;
 
         boolean confirmed = ConfirmDialog.show(this,
@@ -878,20 +815,11 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
         if (confirmed) {
             try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
-                // Leave jeepney
                 routeManager.leaveJeepney(trip.getJeepney().getPlateNumber());
-
-                // Mark trip as completed
                 stateManager.completeTrip();
-
-                // Show trip summary
                 displayTripSummary(trip);
-
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error completing trip: " + ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error completing trip: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -910,20 +838,10 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
             content.setOpaque(false);
 
-            // Header
-            JLabel header = LabelFactory.create(
-                    "🚍 Trip in Progress",
-                    loadCustomFont(Fonts.DM_SANS_BOLD, 24f),
-                    themeManager.getBlack()
-            );
+            JLabel header = LabelFactory.create("Trip in Progress", loadCustomFont(Fonts.DM_SANS_BOLD, 24f), themeManager.getBlack());
             header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            // Route info
-            JPanel routeInfo = PanelFactory.create(
-                    themeManager.getWhite(),
-                    0, 0,
-                    SizeManager.getInstance().getBorderRadiusLarge()
-            );
+            JPanel routeInfo = PanelFactory.create(themeManager.getWhite(), 0, 0, SizeManager.getInstance().getBorderRadiusLarge());
             routeInfo.setLayout(new BoxLayout(routeInfo, BoxLayout.Y_AXIS));
             routeInfo.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
@@ -939,15 +857,8 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             routeInfo.add(Box.createVerticalStrut(10));
             routeInfo.add(createInfoRow("Fare:", "Php " + String.format("%.2f", trip.getRoute().getFare())));
 
-            // Complete button
-            RoundedButton completeBtn = ButtonFactory.create(
-                    "Complete Trip",
-                    loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
-                    themeManager.getBlack(),
-                    themeManager.getWhite(),
-                    200, 45,
-                    SizeManager.getInstance().getBorderRadiusLarge()
-            );
+            RoundedButton completeBtn = ButtonFactory.create("Complete Trip", loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
+                    themeManager.getBlack(), themeManager.getWhite(), 200, 45, SizeManager.getInstance().getBorderRadiusLarge());
             completeBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             completeBtn.addActionListener(e -> handleCompleteTrip());
 
@@ -967,38 +878,25 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         infoPanel.revalidate();
         infoPanel.repaint();
 
-        // Disable route searching while in transit
         currentLocation.setEnabled(false);
         destination.setEnabled(false);
         submitButton.setEnabled(false);
     }
 
-    // NEW: Helper to create info rows
     private JPanel createInfoRow(String label, String value) throws IOException, FontFormatException {
         JPanel row = PanelFactory.create(null, 0, 0, 0);
         row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
         row.setOpaque(false);
 
-        JLabel labelComp = LabelFactory.create(
-                label + " ",
-                loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
-                themeManager.getBlack()
-        );
-
-        JLabel valueComp = LabelFactory.create(
-                value,
-                loadCustomFont(Fonts.DM_SANS_REGULAR, 14f),
-                themeManager.getBlack().brighter()
-        );
+        JLabel labelComp = LabelFactory.create(label + " ", loadCustomFont(Fonts.DM_SANS_BOLD, 14f), themeManager.getBlack());
+        JLabel valueComp = LabelFactory.create(value, loadCustomFont(Fonts.DM_SANS_REGULAR, 14f), themeManager.getBlack().brighter());
 
         row.add(labelComp);
         row.add(valueComp);
         row.add(Box.createHorizontalGlue());
-
         return row;
     }
 
-    // NEW: Display trip summary after completion
     private void displayTripSummary(StateManager.ActiveTrip trip) {
         infoPanel.removeAll();
         infoPanel.setLayout(new BorderLayout());
@@ -1010,18 +908,10 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
             content.setOpaque(false);
 
-            JLabel header = LabelFactory.create(
-                    "✓ Trip Completed!",
-                    loadCustomFont(Fonts.DM_SANS_BOLD, 24f),
-                    themeManager.getBlack()
-            );
+            JLabel header = LabelFactory.create("Trip Completed!", loadCustomFont(Fonts.DM_SANS_BOLD, 24f), themeManager.getBlack());
             header.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JPanel summary = PanelFactory.create(
-                    themeManager.getWhite(),
-                    0, 0,
-                    SizeManager.getInstance().getBorderRadiusLarge()
-            );
+            JPanel summary = PanelFactory.create(themeManager.getWhite(), 0, 0, SizeManager.getInstance().getBorderRadiusLarge());
             summary.setLayout(new BoxLayout(summary, BoxLayout.Y_AXIS));
             summary.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
@@ -1031,14 +921,8 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             summary.add(Box.createVerticalStrut(10));
             summary.add(createInfoRow("Fare Paid:", "Php " + String.format("%.2f", trip.getRoute().getFare())));
 
-            RoundedButton newSearchBtn = ButtonFactory.create(
-                    "Search New Route",
-                    loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
-                    themeManager.getGreen(),
-                    themeManager.getWhite(),
-                    200, 45,
-                    SizeManager.getInstance().getBorderRadiusLarge()
-            );
+            RoundedButton newSearchBtn = ButtonFactory.create("Search New Route", loadCustomFont(Fonts.DM_SANS_BOLD, 14f),
+                    themeManager.getGreen(), themeManager.getWhite(), 200, 45, SizeManager.getInstance().getBorderRadiusLarge());
             newSearchBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             newSearchBtn.addActionListener(e -> {
                 stateManager.returnToBrowsing();
@@ -1065,7 +949,6 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         infoPanel.repaint();
     }
 
-    // --------------------- TRANSFER ROUTE INFO ---------------------
     private void displayTransferRouteInfo(List<RouteComponent> segments) {
         displayedRoute = new ArrayList<>(segments);
         infoPanel.removeAll();
@@ -1147,18 +1030,10 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         p.setLayout(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         p.setOpaque(false);
 
-        RoundedButton save = ButtonFactory.create(
-                "Save Route",
-                loadCustomFont(Fonts.DM_SANS_BOLD, 13f),
-                themeManager.getYellow(),
-                themeManager.getBlack(),
-                160, 40,
-                SizeManager.getInstance().getBorderRadiusLarge()
-        );
+        RoundedButton save = ButtonFactory.create("Save Route", loadCustomFont(Fonts.DM_SANS_BOLD, 13f),
+                themeManager.getYellow(), themeManager.getBlack(), 160, 40, SizeManager.getInstance().getBorderRadiusLarge());
         save.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                setSavedRoutes(route);
-            }
+            @Override public void mouseClicked(MouseEvent e) { setSavedRoutes(route); }
             @Override public void mouseEntered(MouseEvent e) { save.setBackground(themeManager.getBlue()); }
             @Override public void mouseExited(MouseEvent e) { save.setBackground(themeManager.getYellow()); }
         });
@@ -1191,8 +1066,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         JPanel stopsSec = PanelFactory.create(null, 0, 0, 0);
         stopsSec.setLayout(new BoxLayout(stopsSec, BoxLayout.Y_AXIS));
         stopsSec.setOpaque(false);
-        stopsSec.add(LabelFactory.create("Route Stops:",
-                loadCustomFont(Fonts.DM_SANS_BOLD, 12f), themeManager.getBlack()));
+        stopsSec.add(LabelFactory.create("Route Stops:", loadCustomFont(Fonts.DM_SANS_BOLD, 12f), themeManager.getBlack()));
         stopsSec.add(Box.createVerticalStrut(3));
         stopsSec.add(LabelFactory.create("<html>" + stops + "</html>",
                 loadCustomFont(Fonts.DM_SANS_REGULAR, 12f), themeManager.getBlack().brighter()));
@@ -1209,7 +1083,8 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         }
     }
 
-    private void refreshSavedRoutesPanel() {
+    // ← ONLY ONE METHOD: SAFE, NO RECURSION
+    public void refreshSavedRoutesPanel() {
         savedPanel.removeAll();
         ArrayList<RouteComponent> routes = pageManager.getSavedRoutes();
 
@@ -1220,25 +1095,17 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             savedPanel.add(Box.createVerticalStrut(20));
             for (RouteComponent r : routes) {
                 List<RouteComponent> segs = getSegments(r);
-                RoundedPanel rp = PanelFactory.create(
-                        themeManager.getWhite(),
-                        500, 40, 30
-                );
+                RoundedPanel rp = PanelFactory.create(themeManager.getWhite(), 500, 40, 30);
                 rp.setLayout(new BorderLayout());
                 rp.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
-                String labelText;
-                int totalEta = r.getEta();
-                if (segs.size() == 1) {
-                    RouteComponent s = segs.get(0);
-                    labelText = "<html>" + s.getFromLocation() + "<b> -> </b>" + s.getDestination() +
-                            " <b><i>&nbsp;via&nbsp;</i></b>" + s.getRoute() +
-                            " &nbsp;&nbsp;(" + totalEta + " min)</html>";
-                } else {
-                    labelText = "<html>" + segs.get(0).getFromLocation() + " to " + segs.get(segs.size()-1).getDestination() +
-                            " <b><i>&nbsp;via transfer&nbsp;</i></b>" + segs.get(0).getRoute() + " to " + segs.get(1).getRoute() +
-                            " &nbsp;&nbsp;(" + totalEta + " min)</html>";
-                }
+                String labelText = segs.size() == 1
+                        ? "<html>" + segs.get(0).getFromLocation() + "<b> to </b>" + segs.get(0).getDestination() +
+                        " <b><i>&nbsp;via&nbsp;</i></b>" + segs.get(0).getRoute() +
+                        " &nbsp;&nbsp;(" + r.getEta() + " min)</html>"
+                        : "<html>" + segs.get(0).getFromLocation() + " to " + segs.get(segs.size()-1).getDestination() +
+                        " <b><i>&nbsp;via transfer&nbsp;</i></b>" + segs.get(0).getRoute() + " to " + segs.get(segs.size()-1).getRoute() +
+                        " &nbsp;&nbsp;(" + r.getEta() + " min)</html>";
 
                 JLabel lbl = new JLabel(labelText);
                 try { lbl.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 14f)); }
@@ -1253,8 +1120,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     @Override public void mouseExited(MouseEvent e) { lbl.setForeground(themeManager.getBlack()); }
                 });
 
-                JButton del = ButtonFactory.create("X",
-                        new Font("SansSerif", Font.PLAIN, 13),
+                JButton del = ButtonFactory.create("X", new Font("SansSerif", Font.PLAIN, 13),
                         themeManager.getWhite(), Color.RED, 30, 30, 0);
                 del.setBorder(BorderFactory.createEmptyBorder());
                 del.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1312,28 +1178,19 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         @Override
         public void update(String plateNumber, int currentPassengers, int capacity) {
             SwingUtilities.invokeLater(() -> {
-                // Refresh route panels if browsing
                 if (stateManager.isBrowsing()) {
                     refreshCurrentRouteInfo();
                 }
-
-                // Update in-transit view if the user is on this jeepney
                 if (stateManager.isInTransit() &&
                         stateManager.getActiveTrip().getJeepney().getPlateNumber().equals(plateNumber)) {
-                    // Optionally refresh the in-transit display
                     displayInTransitView();
                 }
             });
         }
     }
 
-    // Helper: Extract segments
     private List<RouteComponent> getSegments(RouteComponent route) {
-        if (route instanceof Routes composite) {
-            return composite.getSegments();
-        } else {
-            return List.of(route);
-        }
+        return (route instanceof Routes composite) ? composite.getSegments() : List.of(route);
     }
 
     public static void main(String[] args) {

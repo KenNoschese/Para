@@ -13,8 +13,8 @@ public class Segments implements RouteComponent {
         this.from = from;
         this.to = to;
         this.route = route;
-        this.details = details;
-        this.routeStops = List.copyOf(routeStops);
+        this.details = details != null ? details : "";
+        this.routeStops = routeStops != null ? List.copyOf(routeStops) : List.of();
         this.stops = stops;
         this.eta = eta;
         this.distance = distance;

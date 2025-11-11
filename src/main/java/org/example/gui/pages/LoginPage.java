@@ -12,6 +12,10 @@ import org.example.gui.appManager.ThemeManager;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.function.Consumer;
 
 public class LoginPage extends JPanel {
@@ -45,7 +49,7 @@ public class LoginPage extends JPanel {
             leftPanel.add(graphicLabel, BorderLayout.CENTER);
         } catch (Exception e) {
             System.err.println("Could not load citygraphic.png: " + e.getMessage());
-            leftPanel.setBackground(new Color(240, 240, 240)); // fallback
+            leftPanel.setBackground(new Color(240, 240, 240));
         }
 
         // === RIGHT: Login Form ===
@@ -113,7 +117,7 @@ public class LoginPage extends JPanel {
         loginButton.setBorderPainted(false);
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // === LOGIN LOGIC (OLD FUNCTIONALITY PRESERVED) ===
+        // === LOGIN LOGIC (WORKS WITH UserAccounts) ===
         loginButton.addActionListener(e -> {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()).trim();
@@ -127,24 +131,31 @@ public class LoginPage extends JPanel {
 
             System.out.println("Attempting login for user: " + username);
 
-            boolean success = DatabaseInstance.loginAsUser(username, password);
-
-            if (success) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Login successful!\nWelcome, " + username,
-                        "Login Success", JOptionPane.INFORMATION_MESSAGE);
-
-                // Optional: update session (if needed)
-                DatabaseInstance.setLoggedInUser(username);
-                System.out.println("Connected as: " + DatabaseInstance.getInstance().getActiveUsername());
-
-                cardChanger.accept("LANDING");
-            } else {
+            // VALIDATE USING UserAccounts
+            int userId = validateLogin(username, password);
+            if (userId == -1) {
                 JOptionPane.showMessageDialog(mainPanel,
                         "Invalid username or password.",
                         "Login Failed", JOptionPane.ERROR_MESSAGE);
-                System.out.println("Login failed for user: " + username);
+                return;
             }
+
+            // CREATE ActiveSession
+            if (!insertActiveSession(userId)) {
+                JOptionPane.showMessageDialog(mainPanel,
+                        "Login failed: Could not start session.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            JOptionPane.showMessageDialog(mainPanel,
+                    "Login successful!\nWelcome, " + username,
+                    "Login Success", JOptionPane.INFORMATION_MESSAGE);
+
+            DatabaseInstance.setLoggedInUser(username);
+            System.out.println("Connected as: " + username + " (user_id: " + userId + ")");
+
+            cardChanger.accept("LANDING");
         });
 
         // === ASSEMBLE FORM ===
@@ -168,5 +179,59 @@ public class LoginPage extends JPanel {
         mainPanel.add(rightPanel, BorderLayout.CENTER);
 
         return mainPanel;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // GET USER ID FROM DATABASE
+    // ──────────────────────────────────────────────────────────────
+    private static int getUserIdByUsername(String username) {
+        String sql = "SELECT user_id FROM Users WHERE LOWER(username) = LOWER(?) LIMIT 1";
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("user_id");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to get user_id: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // INSERT INTO ActiveSession (BULLETPROOF)
+    // ──────────────────────────────────────────────────────────────
+    private static boolean insertActiveSession(int userId) {
+        String sql = "INSERT INTO ActiveSession (user_id) VALUES (?) " +
+                "ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), login_time = CURRENT_TIMESTAMP";
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            int rows = ps.executeUpdate();
+            System.out.println("[SESSION] ActiveSession updated for user_id: " + userId);
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to create ActiveSession: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private static int validateLogin(String username, String password) {
+        String sql = "SELECT user_id FROM UserAccounts WHERE LOWER(username) = LOWER(?) AND password = ? LIMIT 1";
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt("user_id") : -1;
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Login failed (UserAccounts): " + e.getMessage());
+            return -1;
+        }
     }
 }

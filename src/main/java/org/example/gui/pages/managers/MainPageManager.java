@@ -1,9 +1,6 @@
 package org.example.gui.pages.managers;
 
-import org.example.DatabaseManager.RouteDatabase.NavigationFacade;
-import org.example.DatabaseManager.RouteDatabase.RouteManager;
-import org.example.DatabaseManager.RouteDatabase.RouteComponent;
-import org.example.DatabaseManager.RouteDatabase.Routes;
+import org.example.DatabaseManager.RouteDatabase.*;
 import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.appManager.ThemeManager;
@@ -40,27 +37,41 @@ public class MainPageManager {
         return ((Number) obj).intValue();
     }
 
-    private final ArrayList<RouteComponent> savedRoutes;
     private String currentFilter = "all";
 
-    public MainPageManager() {
-        this.savedRoutes = new ArrayList<>();
+    private int getCurrentUserId() {
+        String query = "SELECT user_id FROM ActiveSession LIMIT 1";
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
+
+            if (rs.next()) {
+                int userId = rs.getInt("user_id");
+                if (!rs.wasNull()) {
+                    return userId;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to get user ID: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return -1; // Not logged in
     }
 
     // ──────────────────────────────────────────────────────────────
-    // SEARCH ROUTES (OLD LOGIC PRESERVED)
+    // SEARCH ROUTES (PRESERVED & OPTIMIZED)
     // ──────────────────────────────────────────────────────────────
     public SearchResult searchRoutes(String from, String to) throws SQLException {
         if (from == null || from.trim().isEmpty() || to == null || to.trim().isEmpty()) {
             return SearchResult.empty("Please enter both current location and destination.");
         }
 
-        Connection conn = DatabaseInstance.getInstance().getConnection();
-
-        if (currentFilter.equals("all")) {
-            return searchAllRoutes(from, to, conn);
-        } else {
-            return searchFilteredRoutes(from, to, conn);
+        try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+            if ("all".equals(currentFilter)) {
+                return searchAllRoutes(from, to, conn);
+            } else {
+                return searchFilteredRoutes(from, to, conn);
+            }
         }
     }
 
@@ -92,77 +103,193 @@ public class MainPageManager {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // USER CATEGORY FROM ActiveSession (NEW)
-    // ──────────────────────────────────────────────────────────────
-    private String getUserCategory() {
-        String category = "Student";
-        String query = "SELECT password FROM ActiveSession LIMIT 1";
-
-        try (Connection conn = DatabaseInstance.getInstance().getConnection();
-             PreparedStatement ps = conn.prepareStatement(query);
-             ResultSet rs = ps.executeQuery()) {
-
-            if (rs.next()) {
-                String pswd = rs.getString("password");
-                if (pswd != null && !pswd.isEmpty()) {
-                    char first = pswd.charAt(0);
-                    category = switch (first) {
-                        case '1' -> "Regular";
-                        case '2' -> "Student";
-                        case '3' -> "PWD";
-                        case '4' -> "Senior Citizen";
-                        default -> "Student";
-                    };
-                }
-            }
-        } catch (Exception ignored) {
-            // Fallback
-        }
-        return category;
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // SAVED ROUTES (OLD LOGIC PRESERVED)
+    // SAVED ROUTES (PERSISTENT, SAFE, NO DUPLICATES)
     // ──────────────────────────────────────────────────────────────
     public boolean addSavedRoute(RouteComponent route) {
-        if (route == null) return false;
-        for (RouteComponent existing : savedRoutes) {
-            if (isSameRoute(existing, route)) return false;
+        int userId = getCurrentUserId();
+
+        // DEBUG: Show user ID
+        System.out.println("[DEBUG] Attempting to save route. Current user_id = " + userId);
+
+        if (userId == -1) {
+            JOptionPane.showMessageDialog(null,
+                    "Please log in to save routes.\n(Debug: No active session found)",
+                    "Login Required", JOptionPane.WARNING_MESSAGE);
+            return false;
         }
-        savedRoutes.add(route);
-        return true;
+
+        String serialized = serializeRoute(route);
+        if (serialized == null || serialized.isEmpty()) {
+            System.out.println("[ERROR] Failed to serialize route");
+            return false;
+        }
+
+        String sql = "INSERT IGNORE INTO Saved_Routes (user_id, route_data) VALUES (?, ?)";
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setString(2, serialized);
+            int rows = ps.executeUpdate();
+            System.out.println("[SUCCESS] Route saved. Rows affected: " + rows);
+            return rows > 0;
+        } catch (SQLException e) {
+            System.err.println("[SQL ERROR] Save failed: " + e.getMessage());
+            JOptionPane.showMessageDialog(null,
+                    "Error saving route: " + e.getMessage(),
+                    "Database Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
     }
 
     public void removeSavedRoute(RouteComponent route) {
-        savedRoutes.remove(route);
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
+
+        String serialized = serializeRoute(route);
+        if (serialized == null || serialized.isEmpty()) return;
+
+        String sql = "DELETE FROM Saved_Routes WHERE user_id = ? AND route_data = ?";
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setString(2, serialized);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public ArrayList<RouteComponent> getSavedRoutes() {
-        return new ArrayList<>(savedRoutes);
-    }
+        ArrayList<RouteComponent> routes = new ArrayList<>();
+        int userId = getCurrentUserId();
+        if (userId == -1) return routes;
 
-    public void clearSavedRoutes() {
-        savedRoutes.clear();
-    }
+        String sql = "SELECT route_data FROM Saved_Routes WHERE user_id = ? ORDER BY saved_at DESC";
 
-    private boolean isSameRoute(RouteComponent r1, RouteComponent r2) {
-        List<RouteComponent> segs1 = getSegments(r1);
-        List<RouteComponent> segs2 = getSegments(r2);
-        if (segs1.size() != segs2.size()) return false;
-        for (int i = 0; i < segs1.size(); i++) {
-            RouteComponent s1 = segs1.get(i);
-            RouteComponent s2 = segs2.get(i);
-            if (!s1.getRoute().equals(s2.getRoute()) ||
-                    !s1.getFromLocation().equals(s2.getFromLocation()) ||
-                    !s1.getDestination().equals(s2.getDestination())) {
-                return false;
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    RouteComponent route = deserializeRoute(rs.getString("route_data"));
+                    if (route != null) {
+                        routes.add(route);
+                    }
+                }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-        return true;
+        return routes;
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // SERIALIZATION (ROBUST & SAFE)
+    // ──────────────────────────────────────────────────────────────
+    private String serializeRoute(RouteComponent route) {
+        try {
+            List<RouteComponent> segments = getSegments(route);
+            StringBuilder sb = new StringBuilder();
+
+            sb.append(route.getFromLocation()).append("→")
+                    .append(route.getDestination()).append("→")
+                    .append(route.getRoute()).append("→")
+                    .append(route.getFare()).append("→")
+                    .append(route.getEta()).append("→")
+                    .append(route.getStops()).append("→")
+                    .append(route.getTransfers()).append("→")
+                    .append(route.getDetails());
+
+            for (RouteComponent seg : segments) {
+                sb.append("|")
+                        .append(seg.getFromLocation()).append("^")
+                        .append(seg.getDestination()).append("^")
+                        .append(seg.getRoute()).append("^")
+                        .append(seg.getDetails()).append("^")
+                        .append(String.join(",", seg.getRouteStops())).append("^")
+                        .append(seg.getStops()).append("^")
+                        .append(seg.getEta()).append("^")
+                        .append((int)seg.getDistance()).append("^")
+                        .append(seg.getFare());
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private RouteComponent deserializeRoute(String data) {
+        if (data == null || data.isEmpty()) return null;
+
+        try {
+            String[] parts = data.split("\\|", -1);
+            String[] header = parts[0].split("→", -1);
+
+            if (header.length < 8) return null;
+
+            String from = header[0];
+            String to = header[1];
+            String routeName = header[2];
+            double fare = Double.parseDouble(header[3]);
+            int eta = Integer.parseInt(header[4]);
+            int stops = Integer.parseInt(header[5]);
+            int transfers = Integer.parseInt(header[6]);
+            String details = header[7];
+
+            // Parse routeStops from CSV
+            List<String> routeStops = List.of();
+            if (parts.length > 1) {
+                String[] firstSeg = parts[1].split("\\^", -1);
+                if (firstSeg.length >= 5 && !firstSeg[4].isEmpty()) {
+                    routeStops = Arrays.asList(firstSeg[4].split(","));
+                }
+            }
+
+            // CREATE Segments DIRECTLY (NO RouteManager.new)
+            Segments firstSeg = new Segments(
+                    from, to, routeName, details,
+                    routeStops, stops, eta, 0, fare
+            );
+
+            if (transfers == 0) {
+                return firstSeg;
+            }
+
+            Routes composite = new Routes(from + " to " + to);
+            composite.addSegment(firstSeg);
+
+            for (int i = 1; i < parts.length; i++) {
+                String[] s = parts[i].split("\\^", -1);
+                if (s.length < 9) continue;
+
+                List<String> segStops = s[4].isEmpty() ? List.of() : Arrays.asList(s[4].split(","));
+
+                Segments seg = new Segments(
+                        s[0], s[1], s[2], s[3],
+                        segStops,
+                        Integer.parseInt(s[5]),
+                        Integer.parseInt(s[6]),
+                        Integer.parseInt(s[7]),
+                        Double.parseDouble(s[8])
+                );
+                composite.addSegment(seg);
+            }
+            return composite;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // FILTER & STRATEGY
+    // ──────────────────────────────────────────────────────────────
     public void setFilter(String filter) {
-        this.currentFilter = filter;
+        this.currentFilter = filter != null ? filter : "all";
     }
 
     public String getCurrentFilter() {
@@ -171,12 +298,11 @@ public class MainPageManager {
 
     public RouteDetails calculateTransferMetrics(RouteComponent route) {
         if (route == null) return new RouteDetails(0, 0, 0.0, 0);
-        int transfers = route.getTransfers();
-        return new RouteDetails(route.getEta(), route.getStops(), route.getFare(), transfers);
+        return new RouteDetails(route.getEta(), route.getStops(), route.getFare(), route.getTransfers());
     }
 
     public RouteStrategy getStrategyForPriority(String priority) {
-        return switch (priority.toLowerCase()) {
+        return switch ((priority != null ? priority : "").toLowerCase()) {
             case "distance" -> new ShortestDistanceStrategy();
             case "time", "eta" -> new ShortestTimeStrategy();
             case "transfers", "stops" -> new LeastTransferStrategy();
@@ -185,13 +311,18 @@ public class MainPageManager {
         };
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // UTILITIES
+    // ──────────────────────────────────────────────────────────────
     private ArrayList<RouteComponent> removeDuplicateRouteOptions(ArrayList<RouteComponent> list) {
         Set<String> seen = new HashSet<>();
         ArrayList<RouteComponent> uniq = new ArrayList<>();
         for (RouteComponent route : list) {
-            String key = route.getFromLocation() + "→" + route.getDestination() + "→" +
-                    route.getRoute() + "→" + route.getTransfers();
-            if (seen.add(key)) uniq.add(route);
+            String key = route.getFromLocation() + "→" + route.getDestination() +
+                    "→" + route.getRoute() + "→" + route.getTransfers();
+            if (seen.add(key)) {
+                uniq.add(route);
+            }
         }
         return uniq;
     }
@@ -215,7 +346,7 @@ public class MainPageManager {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // UI: LOCATION TABLE (NEW)
+    // UI: LOCATION TABLE (ENHANCED)
     // ──────────────────────────────────────────────────────────────
     public JTable createLocationTable(BiConsumer<String, Boolean> onLocationSelected,
                                       boolean isFrom) throws SQLException, IOException, FontFormatException {
@@ -233,14 +364,13 @@ public class MainPageManager {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setTableHeader(null);
 
-        // Colors
+        ThemeManager theme = ThemeManager.getInstance();
         table.setBackground(Color.WHITE);
-        table.setForeground(ThemeManager.getInstance().getBlack());
-        table.setSelectionBackground(ThemeManager.getInstance().getYellow());
-        table.setSelectionForeground(ThemeManager.getInstance().getBlack());
+        table.setForeground(theme.getBlack());
+        table.setSelectionBackground(theme.getYellow());
+        table.setSelectionForeground(theme.getBlack());
         table.setGridColor(new Color(240, 240, 240));
 
-        // Custom renderer
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
@@ -250,9 +380,11 @@ public class MainPageManager {
                     label.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
                     if (!isSelected) {
                         label.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 248, 248));
+                        try { label.setFont(loadCustomFont(DM_SANS_REGULAR, 13)); }
+                        catch (Exception ignored) {}
                     } else {
-                        label.setBackground(ThemeManager.getInstance().getYellow());
-                        label.setForeground(ThemeManager.getInstance().getBlack());
+                        label.setBackground(theme.getYellow());
+                        label.setForeground(theme.getBlack());
                         try { label.setFont(loadCustomFont(DM_SANS_BOLD, 13)); }
                         catch (Exception ignored) {}
                     }
@@ -261,13 +393,11 @@ public class MainPageManager {
             }
         });
 
-        // Populate
         List<String> stopNames = getAllStopNames();
         for (String stop : stopNames) {
             model.addRow(new Object[]{stop});
         }
 
-        // Click
         table.addMouseListener(new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
@@ -286,7 +416,6 @@ public class MainPageManager {
             }
         });
 
-        // Hover
         table.addMouseMotionListener(new MouseMotionAdapter() {
             private int lastRow = -1;
             @Override public void mouseMoved(MouseEvent e) {
@@ -302,23 +431,23 @@ public class MainPageManager {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // UI: SCROLL PANE (NEW)
+    // UI: SCROLL PANE (CLEAN & THEMED)
     // ──────────────────────────────────────────────────────────────
     public JScrollPane createTableScrollPane(JTable table, ThemeManager themeManager) {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInstance().getWhite().darker(), 2),
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setBackground(Color.WHITE);
 
-        // Scrollbar
-        scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-        scrollPane.getVerticalScrollBar().setBackground(new Color(240, 240, 240));
-        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+        JScrollBar vBar = scrollPane.getVerticalScrollBar();
+        vBar.setPreferredSize(new Dimension(8, 0));
+        vBar.setBackground(new Color(240, 240, 240));
+        vBar.setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
             @Override protected void configureScrollBarColors() {
-                this.thumbColor = ThemeManager.getInstance().getBlue().brighter();
+                this.thumbColor = themeManager.getBlue().brighter();
                 this.trackColor = new Color(240, 240, 240);
             }
 
@@ -328,6 +457,8 @@ public class MainPageManager {
             private JButton createZeroButton() {
                 JButton b = new JButton();
                 b.setPreferredSize(new Dimension(0, 0));
+                b.setMinimumSize(new Dimension(0, 0));
+                b.setMaximumSize(new Dimension(0, 0));
                 return b;
             }
         });
@@ -354,7 +485,7 @@ public class MainPageManager {
     }
 
     // ──────────────────────────────────────────────────────────────
-    // INNER CLASSES (UNCHANGED)
+    // INNER CLASSES
     // ──────────────────────────────────────────────────────────────
     public static class SearchResult {
         private final ArrayList<RouteComponent> allRoutes;
@@ -365,17 +496,17 @@ public class MainPageManager {
         public SearchResult(ArrayList<RouteComponent> allRoutes,
                             ArrayList<RouteComponent> defaultRoute,
                             boolean success) {
-            this.allRoutes = allRoutes;
-            this.defaultRoute = defaultRoute;
+            this.allRoutes = allRoutes != null ? allRoutes : new ArrayList<>();
+            this.defaultRoute = defaultRoute != null ? defaultRoute : new ArrayList<>();
             this.success = success;
             this.message = "";
         }
 
         private SearchResult(String message) {
             this.allRoutes = new ArrayList<>();
-            this.defaultRoute = null;
+            this.defaultRoute = new ArrayList<>();
             this.success = false;
-            this.message = message;
+            this.message = message != null ? message : "";
         }
 
         public static SearchResult empty(String message) { return new SearchResult(message); }
@@ -383,8 +514,8 @@ public class MainPageManager {
         public ArrayList<RouteComponent> getDefaultRoute() { return defaultRoute; }
         public boolean isSuccess() { return success; }
         public String getMessage() { return message; }
-        public boolean isTransferRoute() { return defaultRoute != null && defaultRoute.size() > 1; }
-        public boolean isDirect() { return defaultRoute != null && defaultRoute.size() == 1; }
+        public boolean isTransferRoute() { return defaultRoute.size() > 1; }
+        public boolean isDirect() { return defaultRoute.size() == 1; }
     }
 
     public static class RouteDetails {
