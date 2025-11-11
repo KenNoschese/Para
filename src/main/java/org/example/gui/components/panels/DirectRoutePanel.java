@@ -18,17 +18,18 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static org.example.gui.resources.Fonts.loadCustomFont;
-
-// concrete Product - Direct Route Panel (single jeepney, no transfers)
 
 public class DirectRoutePanel implements RoutePanel {
     private final RouteComponent routeData;
@@ -37,7 +38,7 @@ public class DirectRoutePanel implements RoutePanel {
     private final ThemeManager themeManager;
     private final RouteManager routeManager;
 
-    private JPanel jeepneyPanel;  // Store reference for refresh
+    private JPanel jeepneyPanel;
 
     public DirectRoutePanel(RouteComponent routeData, Consumer<RouteComponent> onClick)
             throws IOException, FontFormatException {
@@ -53,14 +54,15 @@ public class DirectRoutePanel implements RoutePanel {
         Color hoverColor = themeManager.getYellow().brighter();
 
         RoundedPanel routePanel = new RoundedPanel(SizeManager.getInstance().getBorderRadiusLarge());
-        routePanel.setLayout(new BorderLayout(15, 10));
+        routePanel.setLayout(new BorderLayout(15, 0));
         routePanel.setBackground(defaultColor);
-        routePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        routePanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         routePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+        routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+        routePanel.setPreferredSize(new Dimension(Integer.MAX_VALUE, 90));
         routePanel.setOpaque(true);
 
-        routePanel.add(createRouteInfoPanel(), BorderLayout.WEST);
+        routePanel.add(createRouteInfoPanel(), BorderLayout.CENTER);
 
         jeepneyPanel = createJeepneyPanel();
         routePanel.add(jeepneyPanel, BorderLayout.EAST);
@@ -90,87 +92,91 @@ public class DirectRoutePanel implements RoutePanel {
     }
 
     private JPanel createRouteInfoPanel() throws IOException, FontFormatException {
-        JPanel infoPanel = new JPanel();
-        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setOpaque(false);
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setOpaque(false);
 
+        // Row 1: Route name
         JLabel routeTitle = new JLabel(routeData.getRoute());
         routeTitle.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 16));
         routeTitle.setForeground(themeManager.getBlack());
         routeTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        infoPanel.add(routeTitle);
-        infoPanel.add(Box.createVerticalStrut(5));
+        mainPanel.add(routeTitle);
+        mainPanel.add(Box.createVerticalStrut(5));
 
-        JLabel detailsLabel = new JLabel(String.format(
-                "<html><b>Details:</b> %s</html>", routeData.getDetails()
-        ));
-        detailsLabel.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 14));
-        detailsLabel.setForeground(themeManager.getBlack());
-        detailsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        infoPanel.add(detailsLabel);
-        infoPanel.add(Box.createVerticalStrut(5));
+        // Row 2: From -> To on left, details on right
+        JPanel row2 = new JPanel(new BorderLayout());
+        row2.setOpaque(false);
+        row2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel infoLabel = new JLabel(String.format(
-                "<html><b>Transfers:</b> %d <b>| Stops:</b> %d <b>| ETA:</b> %d min</html>",
-                routeData.getTransfers(), routeData.getStops(), routeData.getEta()
-        ));
-        infoLabel.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 13));
-        infoLabel.setForeground(themeManager.getForegroundColor());
-        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        infoPanel.add(infoLabel);
+        JLabel fromTo = new JLabel(routeData.getFromLocation() + " → " + routeData.getDestination());
+        fromTo.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 13));
+        fromTo.setForeground(themeManager.getBlack().brighter());
 
-        JLabel fareLabel = new JLabel(String.format("Php %.2f", routeData.getFare()));
-        fareLabel.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 14));
-        fareLabel.setForeground(themeManager.getBlack());
-        fareLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        infoPanel.add(fareLabel);
+        JLabel details = new JLabel(String.format("%d stops • %d min • Php %.2f",
+                routeData.getStops(), routeData.getEta(), routeData.getFare()));
+        details.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 12));
+        details.setForeground(themeManager.getBlack().brighter());
 
-        return infoPanel;
+        row2.add(fromTo, BorderLayout.WEST);
+        row2.add(details, BorderLayout.EAST);
+
+        mainPanel.add(row2);
+
+        return mainPanel;
     }
 
     private JPanel createJeepneyPanel() throws IOException, FontFormatException {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
-        panel.setAlignmentY(Component.TOP_ALIGNMENT);
+        panel.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        panel.setMinimumSize(new Dimension(200, 100));
-        panel.setMaximumSize(new Dimension(200, 100));
+        panel.setMinimumSize(new Dimension(180, 60));
+        panel.setMaximumSize(new Dimension(180, 60));
+        panel.setPreferredSize(new Dimension(180, 60));
 
         try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
             ArrayList<RouteManager.JeepneyInfo> jeepneys =
                     routeManager.getJeepneysForRoute(routeData.getRoute());
 
             if (!jeepneys.isEmpty()) {
-                System.out.println("📊 Jeepneys found for route " + routeData.getRoute() + ": " + jeepneys.size());
                 JLabel header = new JLabel("Available Jeepneys:");
-                header.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 12));
+                header.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 11));
                 header.setForeground(themeManager.getBlack());
+                header.setAlignmentX(Component.LEFT_ALIGNMENT);
                 panel.add(header);
-                panel.add(Box.createVerticalStrut(5));
+                panel.add(Box.createVerticalStrut(3));
 
-                int count = Math.min(3, jeepneys.size());
+                int count = Math.min(2, jeepneys.size());
                 for (int i = 0; i < count; i++) {
-                    panel.add(createJeepneyLabel(jeepneys.get(i)));
+                    JLabel jeepLabel = createJeepneyLabel(jeepneys.get(i));
+                    jeepLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    panel.add(jeepLabel);
+                    if (i < count - 1) {
+                        panel.add(Box.createVerticalStrut(2));
+                    }
                 }
 
-                if (jeepneys.size() > 3) {
-                    JLabel more = new JLabel("+" + (jeepneys.size() - 3) + " more");
-                    more.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 10));
+                if (jeepneys.size() > 2) {
+                    JLabel more = new JLabel("+" + (jeepneys.size() - 2) + " more");
+                    more.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 9));
                     more.setForeground(themeManager.getGray());
+                    more.setAlignmentX(Component.LEFT_ALIGNMENT);
                     panel.add(more);
                 }
             } else {
-                System.out.println("no jeep");
                 JLabel noJeepneys = new JLabel("No jeepneys available");
                 noJeepneys.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 11));
                 noJeepneys.setForeground(themeManager.getGray());
+                noJeepneys.setAlignmentX(Component.LEFT_ALIGNMENT);
                 panel.add(noJeepneys);
             }
         } catch (Exception e) {
             JLabel error = new JLabel("Error loading jeepneys");
-            error.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 11));
+            error.setFont(loadCustomFont(Fonts.DM_SANS_ITALIC, 10));
             error.setForeground(Color.RED);
+            error.setAlignmentX(Component.LEFT_ALIGNMENT);
             panel.add(error);
         }
 
@@ -180,7 +186,7 @@ public class DirectRoutePanel implements RoutePanel {
     private JLabel createJeepneyLabel(RouteManager.JeepneyInfo jeep)
             throws IOException, FontFormatException {
         String status = jeep.isFull() ? " [FULL]" :
-                jeep.getAvailableSeats() <= 5 ? " [Almost Full]" : "";
+                jeep.getAvailableSeats() <= 5 ? " [Low]" : "";
         Color color = jeep.isFull() ? Color.RED :
                 jeep.getAvailableSeats() <= 5 ? Color.ORANGE :
                         themeManager.getGreen();
@@ -190,7 +196,7 @@ public class DirectRoutePanel implements RoutePanel {
                 jeep.getPlateNumber(), jeep.getCurrentPassengers(),
                 jeep.getCapacity(), status
         ));
-        label.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 11));
+        label.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 10));
         label.setForeground(color);
         return label;
     }

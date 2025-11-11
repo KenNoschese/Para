@@ -10,15 +10,15 @@ public class DatabaseInstance {
     private Connection connection;
     private Statement statement;
 
-    private final String db = "para_schema";
+    private final String db = "route_schema";
 
     private String uname = "root";
-    private String pswd = "akosiestre";
+    private String pswd = "Ken11514!";
 
     private static String currentAppUser;
 
     private static final String JDBC_URL =
-            "jdbc:mysql://127.0.0.1:3306/para_schema?serverTimezone=UTC&allowPublicKeyRetrieval=true";
+            "jdbc:mysql://127.0.0.1:3306/route_schema?serverTimezone=UTC&allowPublicKeyRetrieval=true";
 
     public static void setLoggedInUser(String username) {
         currentAppUser = username;
@@ -100,7 +100,7 @@ public class DatabaseInstance {
 
     public synchronized void forceRootConnection() throws SQLException {
         closeCurrentConnection();
-        connectAsUser("root", "akosiestre");
+        connectAsUser("root", "Ken11514!");
         System.out.println("Restored root connection for login");
     }
 

@@ -22,9 +22,6 @@ import static org.example.gui.resources.Fonts.*;
 
 public class MainPageManager {
 
-    // ──────────────────────────────────────────────────────────────
-    // SAFE DB READERS
-    // ──────────────────────────────────────────────────────────────
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
         if (obj == null) return 0.0;
@@ -38,6 +35,15 @@ public class MainPageManager {
     }
 
     private String currentFilter = "all";
+    private RouteManager routeManager;
+
+    public MainPageManager() {
+        this.routeManager = new RouteManager();
+    }
+
+    public RouteManager getRouteManager() {
+        return routeManager;
+    }
 
     private int getCurrentUserId() {
         String query = "SELECT user_id FROM ActiveSession LIMIT 1";
@@ -55,12 +61,86 @@ public class MainPageManager {
             System.err.println("[ERROR] Failed to get user ID: " + e.getMessage());
             e.printStackTrace();
         }
-        return -1; // Not logged in
+        return -1;
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // SEARCH ROUTES (PRESERVED & OPTIMIZED)
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
+    // BUSINESS LOGIC: TAKE ROUTE
+    // ────────────────────────────────────────────────────────────
+    public TakeRouteResult takeRoute(RouteComponent route) {
+        try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+            List<RouteComponent> segments = getSegments(route);
+
+            // For transfer routes, we need to board all segments
+            List<RouteManager.JeepneyInfo> jeepneyInfos = new ArrayList<>();
+
+            for (RouteComponent segment : segments) {
+                ArrayList<RouteManager.JeepneyInfo> jeepneys =
+                        routeManager.getJeepneysForRoute(segment.getRoute());
+
+                if (jeepneys.isEmpty()) {
+                    return TakeRouteResult.error(
+                            "No jeepneys available on route: " + segment.getRoute()
+                    );
+                }
+
+                RouteManager.JeepneyInfo available = jeepneys.stream()
+                        .filter(j -> !j.isFull())
+                        .findFirst()
+                        .orElse(null);
+
+                if (available == null) {
+                    return TakeRouteResult.error(
+                            "All jeepneys are full on route: " + segment.getRoute()
+                    );
+                }
+
+                jeepneyInfos.add(available);
+            }
+
+            // Board all jeepneys for all segments
+            for (RouteManager.JeepneyInfo jeepney : jeepneyInfos) {
+                routeManager.boardJeepney(jeepney.getPlateNumber());
+            }
+
+            // Return the first jeepney info (for display purposes)
+            return TakeRouteResult.success(jeepneyInfos.get(0), segments);
+
+        } catch (Exception ex) {
+            return TakeRouteResult.error("Error boarding jeepney: " + ex.getMessage());
+        }
+    }
+
+    public CompleteRouteResult completeRoute(StateManager.ActiveTrip trip) {
+        if (trip == null) {
+            return CompleteRouteResult.error("No active trip");
+        }
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection()) {
+            // Get all segments
+            List<RouteComponent> segments = getSegments(trip.getRoute());
+
+            // Leave all jeepneys for all segments
+            for (RouteComponent segment : segments) {
+                ArrayList<RouteManager.JeepneyInfo> jeepneys =
+                        routeManager.getJeepneysForRoute(segment.getRoute());
+
+                for (RouteManager.JeepneyInfo jeepney : jeepneys) {
+                    // Leave the jeepney if it was the one we boarded
+                    routeManager.leaveJeepney(jeepney.getPlateNumber());
+                }
+            }
+
+            return CompleteRouteResult.success(trip);
+
+        } catch (Exception ex) {
+            return CompleteRouteResult.error("Error completing trip: " + ex.getMessage());
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────
+    // SEARCH ROUTES
+    // ────────────────────────────────────────────────────────────
     public SearchResult searchRoutes(String from, String to) throws SQLException {
         if (from == null || from.trim().isEmpty() || to == null || to.trim().isEmpty()) {
             return SearchResult.empty("Please enter both current location and destination.");
@@ -76,7 +156,6 @@ public class MainPageManager {
     }
 
     private SearchResult searchAllRoutes(String from, String to, Connection conn) throws SQLException {
-        RouteManager routeManager = new RouteManager();
         ArrayList<RouteComponent> allPossible = routeManager.findRoutesWithTransfers(from, to);
         allPossible = removeDuplicateRouteOptions(allPossible);
 
@@ -102,14 +181,11 @@ public class MainPageManager {
         return new SearchResult(single, bestFullRoute, true);
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // SAVED ROUTES (PERSISTENT, SAFE, NO DUPLICATES)
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
+    // SAVED ROUTES
+    // ────────────────────────────────────────────────────────────
     public boolean addSavedRoute(RouteComponent route) {
         int userId = getCurrentUserId();
-
-        // DEBUG: Show user ID
-        System.out.println("[DEBUG] Attempting to save route. Current user_id = " + userId);
 
         if (userId == -1) {
             JOptionPane.showMessageDialog(null,
@@ -120,7 +196,6 @@ public class MainPageManager {
 
         String serialized = serializeRoute(route);
         if (serialized == null || serialized.isEmpty()) {
-            System.out.println("[ERROR] Failed to serialize route");
             return false;
         }
 
@@ -131,7 +206,6 @@ public class MainPageManager {
             ps.setInt(1, userId);
             ps.setString(2, serialized);
             int rows = ps.executeUpdate();
-            System.out.println("[SUCCESS] Route saved. Rows affected: " + rows);
             return rows > 0;
         } catch (SQLException e) {
             System.err.println("[SQL ERROR] Save failed: " + e.getMessage());
@@ -185,9 +259,9 @@ public class MainPageManager {
         return routes;
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // SERIALIZATION (ROBUST & SAFE)
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
+    // SERIALIZATION
+    // ────────────────────────────────────────────────────────────
     private String serializeRoute(RouteComponent route) {
         try {
             List<RouteComponent> segments = getSegments(route);
@@ -239,7 +313,6 @@ public class MainPageManager {
             int transfers = Integer.parseInt(header[6]);
             String details = header[7];
 
-            // Parse routeStops from CSV
             List<String> routeStops = List.of();
             if (parts.length > 1) {
                 String[] firstSeg = parts[1].split("\\^", -1);
@@ -248,7 +321,6 @@ public class MainPageManager {
                 }
             }
 
-            // CREATE Segments DIRECTLY (NO RouteManager.new)
             Segments firstSeg = new Segments(
                     from, to, routeName, details,
                     routeStops, stops, eta, 0, fare
@@ -285,9 +357,9 @@ public class MainPageManager {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     // FILTER & STRATEGY
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     public void setFilter(String filter) {
         this.currentFilter = filter != null ? filter : "all";
     }
@@ -301,19 +373,9 @@ public class MainPageManager {
         return new RouteDetails(route.getEta(), route.getStops(), route.getFare(), route.getTransfers());
     }
 
-    public RouteStrategy getStrategyForPriority(String priority) {
-        return switch ((priority != null ? priority : "").toLowerCase()) {
-            case "distance" -> new ShortestDistanceStrategy();
-            case "time", "eta" -> new ShortestTimeStrategy();
-            case "transfers", "stops" -> new LeastTransferStrategy();
-            case "fare" -> new CheapestFareStrategy();
-            default -> new ShortestTimeStrategy();
-        };
-    }
-
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     // UTILITIES
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     private ArrayList<RouteComponent> removeDuplicateRouteOptions(ArrayList<RouteComponent> list) {
         Set<String> seen = new HashSet<>();
         ArrayList<RouteComponent> uniq = new ArrayList<>();
@@ -345,9 +407,9 @@ public class MainPageManager {
                 to != null && !to.trim().isEmpty();
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // UI: LOCATION TABLE (ENHANCED)
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
+    // UI: LOCATION TABLE
+    // ────────────────────────────────────────────────────────────
     public JTable createLocationTable(BiConsumer<String, Boolean> onLocationSelected,
                                       boolean isFrom) throws SQLException, IOException, FontFormatException {
 
@@ -430,9 +492,6 @@ public class MainPageManager {
         return table;
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // UI: SCROLL PANE (CLEAN & THEMED)
-    // ──────────────────────────────────────────────────────────────
     public JScrollPane createTableScrollPane(JTable table, ThemeManager themeManager) {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
@@ -466,14 +525,14 @@ public class MainPageManager {
         return scrollPane;
     }
 
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     // HELPERS
-    // ──────────────────────────────────────────────────────────────
-    private ArrayList<RouteComponent> getSegments(RouteComponent route) {
+    // ────────────────────────────────────────────────────────────
+    public ArrayList<RouteComponent> getSegments(RouteComponent route) {
         if (route instanceof Routes composite) {
             return new ArrayList<>(composite.getSegments());
         } else {
-            return new ArrayList<>(java.util.List.of(route));
+            return new ArrayList<>(List.of(route));
         }
     }
 
@@ -484,9 +543,9 @@ public class MainPageManager {
         return composite;
     }
 
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     // INNER CLASSES
-    // ──────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────
     public static class SearchResult {
         private final ArrayList<RouteComponent> allRoutes;
         private final ArrayList<RouteComponent> defaultRoute;
@@ -536,5 +595,60 @@ public class MainPageManager {
         public double getTotalFare() { return totalFare; }
         public int getTransfers() { return transfers; }
         public int getSegments() { return transfers + 1; }
+    }
+
+    public static class TakeRouteResult {
+        private final boolean success;
+        private final String errorMessage;
+        private final RouteManager.JeepneyInfo jeepney;
+        private final List<RouteComponent> segments;
+
+        private TakeRouteResult(boolean success, String errorMessage,
+                                RouteManager.JeepneyInfo jeepney,
+                                List<RouteComponent> segments) {
+            this.success = success;
+            this.errorMessage = errorMessage;
+            this.jeepney = jeepney;
+            this.segments = segments;
+        }
+
+        public static TakeRouteResult success(RouteManager.JeepneyInfo jeepney,
+                                              List<RouteComponent> segments) {
+            return new TakeRouteResult(true, null, jeepney, segments);
+        }
+
+        public static TakeRouteResult error(String message) {
+            return new TakeRouteResult(false, message, null, null);
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getErrorMessage() { return errorMessage; }
+        public RouteManager.JeepneyInfo getJeepney() { return jeepney; }
+        public List<RouteComponent> getSegments() { return segments; }
+    }
+
+    public static class CompleteRouteResult {
+        private final boolean success;
+        private final String errorMessage;
+        private final StateManager.ActiveTrip trip;
+
+        private CompleteRouteResult(boolean success, String errorMessage,
+                                    StateManager.ActiveTrip trip) {
+            this.success = success;
+            this.errorMessage = errorMessage;
+            this.trip = trip;
+        }
+
+        public static CompleteRouteResult success(StateManager.ActiveTrip trip) {
+            return new CompleteRouteResult(true, null, trip);
+        }
+
+        public static CompleteRouteResult error(String message) {
+            return new CompleteRouteResult(false, message, null);
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getErrorMessage() { return errorMessage; }
+        public StateManager.ActiveTrip getTrip() { return trip; }
     }
 }
