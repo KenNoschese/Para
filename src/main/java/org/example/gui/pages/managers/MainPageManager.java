@@ -20,7 +20,7 @@ import java.util.function.BiConsumer;
 import static org.example.gui.resources.Fonts.*;
 
 public class MainPageManager {
-    //i love u guys
+    //i hate myself
     @SuppressWarnings("unused")
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
