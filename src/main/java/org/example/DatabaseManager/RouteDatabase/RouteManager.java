@@ -20,6 +20,7 @@ public class RouteManager {
     // ──────────────────────────────────────────────────────────────
     // SAFE DB READERS
     // ──────────────────────────────────────────────────────────────
+    @SuppressWarnings("unused")
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
         return obj == null ? 0.0 : ((Number) obj).doubleValue();
@@ -291,12 +292,10 @@ public class RouteManager {
 
         // === STEP 1: READ ALL TRANSFER DATA INTO MEMORY ===
         class TransferInfo {
-            final int fromRouteId, toRouteId;
             final String transferStop;
 
             TransferInfo(int fromRouteId, int toRouteId, String transferStop) {
-                this.fromRouteId = fromRouteId;
-                this.toRouteId = toRouteId;
+                // Route IDs stored but only transferStop is used
                 this.transferStop = transferStop;
             }
         }

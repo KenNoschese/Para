@@ -4,7 +4,6 @@ import java.awt.*;
 import java.io.File;
 import javax.swing.*;
 import org.example.gui.appManager.ThemeManager;
-import org.example.gui.appManager.SizeManager;
 import org.example.gui.components.base.RoundedPanel;
 import org.example.gui.resources.Fonts;
 

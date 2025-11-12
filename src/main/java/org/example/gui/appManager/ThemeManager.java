@@ -95,7 +95,7 @@ public class ThemeManager {
             // Store the original border if it has padding
             Border currentBorder = jcomp.getBorder();
 
-            if (jcomp instanceof JButton button) {
+            if (jcomp instanceof JButton) {
                 jcomp.setBackground(getComponentsColor());
                 // Preserve empty borders (padding)
                 if (currentBorder instanceof javax.swing.border.EmptyBorder) {
@@ -126,7 +126,7 @@ public class ThemeManager {
                 table.setSelectionForeground(getBlack());
                 table.setGridColor(getWhite());
             }
-            else if (jcomp instanceof JPanel panel) {
+            else if (jcomp instanceof JPanel) {
                 Color bg = jcomp.getBackground();
 
                 // Check for theme color properties

@@ -3,7 +3,6 @@ package org.example.gui.components.panels;
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
-import org.example.gui.appManager.SizeManager;
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.components.base.RoundedPanel;
 import org.example.gui.resources.Fonts;

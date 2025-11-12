@@ -184,6 +184,7 @@ public class LoginPage extends JPanel {
     // ──────────────────────────────────────────────────────────────
     // GET USER ID FROM DATABASE
     // ──────────────────────────────────────────────────────────────
+    @SuppressWarnings("unused")
     private static int getUserIdByUsername(String username) {
         String sql = "SELECT user_id FROM Users WHERE LOWER(username) = LOWER(?) LIMIT 1";
         try (Connection conn = DatabaseInstance.getInstance().getConnection();

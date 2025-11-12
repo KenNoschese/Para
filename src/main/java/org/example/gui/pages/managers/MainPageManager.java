@@ -1,7 +1,6 @@
 package org.example.gui.pages.managers;
 
 import org.example.DatabaseManager.RouteDatabase.*;
-import org.example.DatabaseManager.RouteDatabase.StrategyClasses.*;
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.appManager.ThemeManager;
 
@@ -22,12 +21,14 @@ import static org.example.gui.resources.Fonts.*;
 
 public class MainPageManager {
 
+    @SuppressWarnings("unused")
     private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
         if (obj == null) return 0.0;
         return ((Number) obj).doubleValue();
     }
 
+    @SuppressWarnings("unused")
     private static int getIntSafe(ResultSet rs, String column) throws SQLException {
         Object obj = rs.getObject(column);
         if (obj == null) return 0;
@@ -45,7 +46,7 @@ public class MainPageManager {
         return routeManager;
     }
 
-    private int getCurrentUserId() {
+    public int getCurrentUserId() {
         String query = "SELECT user_id FROM ActiveSession LIMIT 1";
         try (Connection conn = DatabaseInstance.getInstance().getConnection();
              PreparedStatement ps = conn.prepareStatement(query);
@@ -53,14 +54,14 @@ public class MainPageManager {
 
             if (rs.next()) {
                 int userId = rs.getInt("user_id");
-                if (!rs.wasNull()) {
-                    return userId;
-                }
+                System.out.println("[DEBUG] ActiveSession user_id = " + userId); // ← ADD THIS
+                return userId;
             }
         } catch (SQLException e) {
-            System.err.println("[ERROR] Failed to get user ID: " + e.getMessage());
+            System.err.println("[ERROR] getCurrentUserId failed: " + e.getMessage());
             e.printStackTrace();
         }
+        System.out.println("[DEBUG] No ActiveSession found");
         return -1;
     }
 
@@ -186,11 +187,10 @@ public class MainPageManager {
     // ────────────────────────────────────────────────────────────
     public boolean addSavedRoute(RouteComponent route) {
         int userId = getCurrentUserId();
+        System.out.println("[DEBUG] addSavedRoute() → user_id = " + userId);
 
         if (userId == -1) {
-            JOptionPane.showMessageDialog(null,
-                    "Please log in to save routes.\n(Debug: No active session found)",
-                    "Login Required", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Please log in to save routes.", "Login Required", JOptionPane.WARNING_MESSAGE);
             return false;
         }
 
@@ -209,19 +209,23 @@ public class MainPageManager {
             return rows > 0;
         } catch (SQLException e) {
             System.err.println("[SQL ERROR] Save failed: " + e.getMessage());
-            JOptionPane.showMessageDialog(null,
-                    "Error saving route: " + e.getMessage(),
-                    "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Error saving route: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
 
     public void removeSavedRoute(RouteComponent route) {
         int userId = getCurrentUserId();
-        if (userId == -1) return;
+        if (userId == -1) {
+            System.out.println("[WARN] No active session. Cannot delete route.");
+            return;
+        }
 
         String serialized = serializeRoute(route);
-        if (serialized == null || serialized.isEmpty()) return;
+        if (serialized == null || serialized.isEmpty()) {
+            System.out.println("[ERROR] Failed to serialize route for deletion");
+            return;
+        }
 
         String sql = "DELETE FROM Saved_Routes WHERE user_id = ? AND route_data = ?";
 
@@ -229,8 +233,10 @@ public class MainPageManager {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.setString(2, serialized);
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
+            System.out.println("[SUCCESS] Route deleted. Rows affected: " + rows);
         } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to delete route: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -238,7 +244,13 @@ public class MainPageManager {
     public ArrayList<RouteComponent> getSavedRoutes() {
         ArrayList<RouteComponent> routes = new ArrayList<>();
         int userId = getCurrentUserId();
-        if (userId == -1) return routes;
+
+        System.out.println("[DEBUG] Loading saved routes for user_id = " + userId);
+
+        if (userId == -1) {
+            System.out.println("[WARN] No active user. Returning empty saved routes.");
+            return routes;
+        }
 
         String sql = "SELECT route_data FROM Saved_Routes WHERE user_id = ? ORDER BY saved_at DESC";
 
@@ -250,23 +262,77 @@ public class MainPageManager {
                     RouteComponent route = deserializeRoute(rs.getString("route_data"));
                     if (route != null) {
                         routes.add(route);
+                        System.out.println("[DEBUG] Loaded route: " + route.getRoute());
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to load saved routes: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        System.out.println("[DEBUG] Total saved routes loaded: " + routes.size());
+        return routes;
+    }
+
+    public static class SavedRouteEntry {
+        public final String routeData;     // Exact DB string
+        public final RouteComponent route; // Deserialized object
+        public SavedRouteEntry(String routeData, RouteComponent route) {
+            this.routeData = routeData;
+            this.route = route;
+        }
+    }
+
+    public ArrayList<SavedRouteEntry> getSavedRoutesWithData() {
+        int userId = getCurrentUserId();
+        if (userId == -1) return new ArrayList<>();
+
+        String sql = "SELECT route_data FROM Saved_Routes WHERE user_id = ?";
+        ArrayList<SavedRouteEntry> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String routeData = rs.getString("route_data");
+                    RouteComponent route = deserializeRoute(routeData);
+                    if (route != null) {
+                        list.add(new SavedRouteEntry(routeData, route));
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return routes;
+        System.out.println("[LOAD] Total saved routes loaded: " + list.size());
+        return list;
     }
 
-    // ────────────────────────────────────────────────────────────
-    // SERIALIZATION
-    // ────────────────────────────────────────────────────────────
-    private String serializeRoute(RouteComponent route) {
+    public void removeSavedRouteByExactData(String routeData) {
+        int userId = getCurrentUserId();
+        if (userId == -1 || routeData == null) return;
+
+        String sql = "DELETE FROM Saved_Routes WHERE user_id = ? AND route_data = ?";
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setString(2, routeData);
+            int rows = ps.executeUpdate();
+            System.out.println("[DELETE] Rows affected: " + rows);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // SERIALIZATION (ROBUST & SAFE)
+    // ──────────────────────────────────────────────────────────────
+    public String serializeRoute(RouteComponent route) {
         try {
             List<RouteComponent> segments = getSegments(route);
             StringBuilder sb = new StringBuilder();
-
             sb.append(route.getFromLocation()).append("→")
                     .append(route.getDestination()).append("→")
                     .append(route.getRoute()).append("→")
@@ -288,7 +354,10 @@ public class MainPageManager {
                         .append((int)seg.getDistance()).append("^")
                         .append(seg.getFare());
             }
-            return sb.toString();
+
+            String result = sb.toString();
+            System.out.println("[SERIALIZE] Route data: " + result);
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
             return null;

@@ -18,15 +18,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 import static org.example.gui.resources.Fonts.loadCustomFont;

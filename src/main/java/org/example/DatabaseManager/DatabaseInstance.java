@@ -10,10 +10,11 @@ public class DatabaseInstance {
     private Connection connection;
     private Statement statement;
 
-    private final String db = "route_schema";
+    // Database schema name (for reference)
+    // private final String db = "route_schema";
 
     private String uname = "root";
-    private String pswd = "Ken11514!";
+    private String pswd = "1234";
 
     private static String currentAppUser;
 
@@ -145,6 +146,18 @@ public class DatabaseInstance {
         closeCurrentConnection();
         synchronized (DatabaseInstance.class) {
             instance = null;
+        }
+    }
+
+    public static void logout() {
+        String sql = "DELETE FROM ActiveSession";
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            int rows = ps.executeUpdate();
+            System.out.println("[LOGOUT] ActiveSession cleared. Rows deleted: " + rows);
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to clear ActiveSession: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

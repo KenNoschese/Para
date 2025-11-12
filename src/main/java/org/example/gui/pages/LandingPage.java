@@ -25,7 +25,7 @@ public class LandingPage extends JPanel implements ThemeManager.ThemeChangeListe
     private RoundedPanel infoContainer;
     private JPanel infoTextPanel;
     private RoundedButton startButton;
-    private Images img;
+    // private Images img; // Not currently used
 
     public LandingPage(Consumer<String> cardChanger) throws IOException, FontFormatException {
         this.cardChanger = cardChanger;

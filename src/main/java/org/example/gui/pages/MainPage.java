@@ -15,6 +15,7 @@ import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserve
 import org.example.DatabaseManager.RouteDatabase.RouteManager;
 import org.example.DatabaseManager.RouteDatabase.RouteComponent;
 import org.example.DatabaseManager.RouteDatabase.Routes;
+import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.appManager.*;
 import org.example.gui.components.dialogs.ConfirmDialog;
 import org.example.gui.components.dialogs.SuccessDialog;
@@ -97,10 +98,64 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         );
         leftPanel.setLayout(new BorderLayout());
 
+        // === DARK MODE TOGGLE ===
         DarkModeToggle darkMode = new DarkModeToggle();
+
+        // === USER BUTTON WITH LOGOUT + TOOLTIP + CURSOR + STYLING ===
         userButton = UserButton.createUserButton();
         userButton.setPreferredSize(new Dimension(200, 30));
+        userButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        userButton.setToolTipText("Click to log out");
 
+        // === LOGOUT ACTION LISTENER ===
+        userButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "<html><b>Log out of your account?</b><br>Any unsaved changes will be lost.</html>",
+                    "Confirm Logout",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                // === STEP 1: CLEAR ActiveSession FROM DATABASE ===
+                try (Connection conn = DatabaseInstance.getInstance().getConnection();
+                     PreparedStatement ps = conn.prepareStatement("DELETE FROM ActiveSession")) {
+                    int rows = ps.executeUpdate();
+                    System.out.println("[LOGOUT] ActiveSession cleared. Rows deleted: " + rows);
+                } catch (SQLException ex) {
+                    System.err.println("[ERROR] Failed to clear ActiveSession: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Could not log out properly. Please try again.",
+                            "Logout Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    ex.printStackTrace();
+                    return; // Stop if DB fails
+                }
+
+                // === STEP 2: RESET UI STATE ===
+                currentLocation.setText("");
+                destination.setText("");
+                clearRouteContainer();
+                setInfoMessage("No chosen route.");
+                refreshSavedRoutesPanel(); // Now shows "No saved routes" for next user
+
+                // === STEP 3: NAVIGATE TO LOGIN PAGE ===
+                cardChanger.accept("LOGIN");
+
+                // === STEP 4: SHOW SUCCESS MESSAGE (OPTIONAL) ===
+                JOptionPane.showMessageDialog(
+                        null,
+                        "You have been logged out successfully.",
+                        "Logged Out",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+        });
+
+        // === HEADER PANEL (User + Dark Mode) ===
         JPanel header = PanelFactory.create(null, 350, 50,
                 SizeManager.getInstance().getBorderRadiusSmall());
         header.setLayout(new FlowLayout(FlowLayout.CENTER, 30, 20));
@@ -108,6 +163,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         header.add(userButton);
         header.add(darkMode);
 
+        // === CONTENT PANEL (Welcome + Inputs) ===
         JPanel contentPanel = PanelFactory.create(
                 themeManager.getYellow(),
                 0, 0,
@@ -117,14 +173,17 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         contentPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
         contentPanel.add(createTextContainer());
 
+        // === WRAPPER TO ALIGN CONTENT TO TOP ===
         JPanel wrapper = PanelFactory.create(null, 0, 0,
                 SizeManager.getInstance().getBorderRadiusSmall());
         wrapper.setLayout(new BorderLayout());
         wrapper.setOpaque(false);
         wrapper.add(contentPanel, BorderLayout.NORTH);
 
+        // === FINAL ASSEMBLY ===
         leftPanel.add(header, BorderLayout.NORTH);
         leftPanel.add(wrapper, BorderLayout.CENTER);
+
         return leftPanel;
     }
 
@@ -1366,14 +1425,18 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
     public void refreshSavedRoutesPanel() {
         savedPanel.removeAll();
-        ArrayList<RouteComponent> routes = pageManager.getSavedRoutes();
+        ArrayList<MainPageManager.SavedRouteEntry> routes = pageManager.getSavedRoutesWithData();
 
         if (routes.isEmpty()) {
             setPanelPlaceholder(savedPanel, "No saved routes.");
         } else {
             savedPanel.setLayout(new BoxLayout(savedPanel, BoxLayout.Y_AXIS));
             savedPanel.add(Box.createVerticalStrut(20));
-            for (RouteComponent r : routes) {
+
+            for (MainPageManager.SavedRouteEntry entry : routes) {
+                RouteComponent r = entry.route;
+                String dbRouteData = entry.routeData; // ← EXACT STRING FROM DB
+
                 List<RouteComponent> segs = pageManager.getSegments(r);
                 RoundedPanel rp = PanelFactory.create(themeManager.getWhite(), 500, 40, 30);
                 rp.setLayout(new BorderLayout());
@@ -1410,8 +1473,9 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                         themeManager.getWhite(), Color.RED, 30, 30, 0);
                 del.setBorder(BorderFactory.createEmptyBorder());
                 del.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
                 del.addActionListener(e -> {
-                    pageManager.removeSavedRoute(r);
+                    pageManager.removeSavedRouteByExactData(dbRouteData); // ← USE DB STRING
                     refreshSavedRoutesPanel();
                 });
 
