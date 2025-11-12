@@ -20,13 +20,14 @@ import java.util.function.Consumer;
 
 import static org.example.gui.resources.Fonts.loadCustomFont;
 
-public class TransferRoutePanel implements RoutePanel {
+public class TransferRoutePanel implements RoutePanel, ThemeManager.ThemeChangeListener {
     private final List<RouteComponent> segments;
     private final Consumer<List<RouteComponent>> onClick;
     private final RoundedPanel panel;
     private final ThemeManager themeManager;
     private final RouteManager routeManager;
-    private final List<JPanel> jeepneyPanels; // Store references for refresh
+    private final List<JPanel> jeepneyPanels;
+    private boolean isHovered = false;
 
     public TransferRoutePanel(List<RouteComponent> segments, Consumer<List<RouteComponent>> onClick)
             throws IOException, FontFormatException {
@@ -36,15 +37,15 @@ public class TransferRoutePanel implements RoutePanel {
         this.routeManager = new RouteManager();
         this.jeepneyPanels = new ArrayList<>();
         this.panel = createPanel();
+
+        // Register as theme listener
+        this.themeManager.addThemeChangeListener(this);
     }
 
     private RoundedPanel createPanel() throws IOException, FontFormatException {
-        Color defaultColor = themeManager.getPanelColor();
-        Color hoverColor = themeManager.getYellow().brighter();
-
         RoundedPanel panel = new RoundedPanel(30);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(defaultColor);
+        panel.setBackground(themeManager.getWhite());
         panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         panel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 250));
@@ -118,14 +119,16 @@ public class TransferRoutePanel implements RoutePanel {
         panel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                panel.setBackground(hoverColor);
+                isHovered = true;
+                panel.setBackground(themeManager.getYellow());
                 panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 panel.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                panel.setBackground(defaultColor);
+                isHovered = false;
+                panel.setBackground(themeManager.getWhite());
                 panel.setCursor(Cursor.getDefaultCursor());
                 panel.repaint();
             }
@@ -235,5 +238,23 @@ public class TransferRoutePanel implements RoutePanel {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onThemeChange(boolean isDarkMode) {
+        // Update panel background based on hover state
+        panel.setBackground(themeManager.getWhite());
+        panel.setBackground(isHovered ? themeManager.getYellow() : themeManager.getWhite());
+
+        // Update all child components
+        themeManager.applyThemeToContainers(panel);
+
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    // Clean up listener when panel is no longer needed
+    public void dispose() {
+        themeManager.removeThemeChangeListener(this);
     }
 }

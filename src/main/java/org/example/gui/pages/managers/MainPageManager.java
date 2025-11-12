@@ -426,27 +426,28 @@ public class MainPageManager {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setTableHeader(null);
 
+        // Apply initial theme
         ThemeManager theme = ThemeManager.getInstance();
-        table.setBackground(Color.WHITE);
-        table.setForeground(theme.getBlack());
-        table.setSelectionBackground(theme.getYellow());
-        table.setSelectionForeground(theme.getBlack());
-        table.setGridColor(new Color(240, 240, 240));
+        updateTableTheme(table, theme);
 
+        // Custom renderer that respects theme
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                                                            boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                ThemeManager currentTheme = ThemeManager.getInstance();
+
                 if (c instanceof JLabel label) {
                     label.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
                     if (!isSelected) {
-                        label.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 248, 248));
+                        label.setBackground(currentTheme.getWhite());
+                        label.setForeground(currentTheme.getBlack());
                         try { label.setFont(loadCustomFont(DM_SANS_REGULAR, 13)); }
                         catch (Exception ignored) {}
                     } else {
-                        label.setBackground(theme.getYellow());
-                        label.setForeground(theme.getBlack());
+                        label.setBackground(currentTheme.getYellow());
+                        label.setForeground(currentTheme.getBlack());
                         try { label.setFont(loadCustomFont(DM_SANS_BOLD, 13)); }
                         catch (Exception ignored) {}
                     }
@@ -492,22 +493,31 @@ public class MainPageManager {
         return table;
     }
 
+    private void updateTableTheme(JTable table, ThemeManager theme) {
+        table.setBackground(theme.getWhite());
+        table.setForeground(theme.getBlack());
+        table.setSelectionBackground(theme.getYellow());
+        table.setSelectionForeground(theme.getBlack());
+        table.setGridColor(theme.getWhite());
+    }
+
+
     public JScrollPane createTableScrollPane(JTable table, ThemeManager themeManager) {
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
+                BorderFactory.createLineBorder(themeManager.getGray(), 1),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
-        scrollPane.getViewport().setBackground(Color.WHITE);
-        scrollPane.setBackground(Color.WHITE);
+        scrollPane.getViewport().setBackground(themeManager.getWhite());
+        scrollPane.setBackground(themeManager.getWhite());
 
         JScrollBar vBar = scrollPane.getVerticalScrollBar();
         vBar.setPreferredSize(new Dimension(8, 0));
-        vBar.setBackground(new Color(240, 240, 240));
+        vBar.setBackground(themeManager.getBackgroundColor());
         vBar.setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
             @Override protected void configureScrollBarColors() {
                 this.thumbColor = themeManager.getBlue().brighter();
-                this.trackColor = new Color(240, 240, 240);
+                this.trackColor = themeManager.getBackgroundColor();
             }
 
             @Override protected JButton createDecreaseButton(int orientation) { return createZeroButton(); }

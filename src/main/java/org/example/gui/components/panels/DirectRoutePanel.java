@@ -31,7 +31,7 @@ import java.util.function.Consumer;
 
 import static org.example.gui.resources.Fonts.loadCustomFont;
 
-public class DirectRoutePanel implements RoutePanel {
+public class DirectRoutePanel implements RoutePanel, ThemeManager.ThemeChangeListener {
     private final RouteComponent routeData;
     private final Consumer<RouteComponent> onClick;
     private final RoundedPanel panel;
@@ -39,6 +39,7 @@ public class DirectRoutePanel implements RoutePanel {
     private final RouteManager routeManager;
 
     private JPanel jeepneyPanel;
+    private boolean isHovered = false;
 
     public DirectRoutePanel(RouteComponent routeData, Consumer<RouteComponent> onClick)
             throws IOException, FontFormatException {
@@ -47,15 +48,15 @@ public class DirectRoutePanel implements RoutePanel {
         this.themeManager = ThemeManager.getInstance();
         this.routeManager = new RouteManager();
         this.panel = createPanel();
+
+        // Register as theme listener
+        this.themeManager.addThemeChangeListener(this);
     }
 
     private RoundedPanel createPanel() throws IOException, FontFormatException {
-        Color defaultColor = themeManager.getPanelColor();
-        Color hoverColor = themeManager.getYellow().brighter();
-
         RoundedPanel routePanel = new RoundedPanel(SizeManager.getInstance().getBorderRadiusLarge());
         routePanel.setLayout(new BorderLayout(15, 0));
-        routePanel.setBackground(defaultColor);
+        routePanel.setBackground(themeManager.getWhite());
         routePanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         routePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         routePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
@@ -70,14 +71,16 @@ public class DirectRoutePanel implements RoutePanel {
         routePanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                routePanel.setBackground(hoverColor);
+                isHovered = true;
+                routePanel.setBackground(themeManager.getYellow());
                 routePanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 routePanel.repaint();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                routePanel.setBackground(defaultColor);
+                isHovered = false;
+                routePanel.setBackground(themeManager.getWhite());
                 routePanel.setCursor(Cursor.getDefaultCursor());
                 routePanel.repaint();
             }
@@ -111,12 +114,12 @@ public class DirectRoutePanel implements RoutePanel {
 
         JLabel fromTo = new JLabel(routeData.getFromLocation() + " → " + routeData.getDestination());
         fromTo.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 13));
-        fromTo.setForeground(themeManager.getBlack().brighter());
+        fromTo.setForeground(themeManager.getBlack());
 
         JLabel details = new JLabel(String.format("%d stops • %d min • Php %.2f",
                 routeData.getStops(), routeData.getEta(), routeData.getFare()));
         details.setFont(loadCustomFont(Fonts.DM_SANS_REGULAR, 12));
-        details.setForeground(themeManager.getBlack().brighter());
+        details.setForeground(themeManager.getBlack());
 
         row2.add(fromTo, BorderLayout.WEST);
         row2.add(details, BorderLayout.EAST);
@@ -187,7 +190,7 @@ public class DirectRoutePanel implements RoutePanel {
             throws IOException, FontFormatException {
         String status = jeep.isFull() ? " [FULL]" :
                 jeep.getAvailableSeats() <= 5 ? " [Low]" : "";
-        Color color = jeep.isFull() ? Color.RED :
+        Color color = jeep.isFull() ? ThemeManager.getInstance().getRed() :
                 jeep.getAvailableSeats() <= 5 ? Color.ORANGE :
                         themeManager.getGreen();
 
@@ -222,5 +225,23 @@ public class DirectRoutePanel implements RoutePanel {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onThemeChange(boolean isDarkMode) {
+        // Update panel background based on hover state
+        panel.setBackground(themeManager.getWhite());
+        panel.setBackground(isHovered ? themeManager.getYellow() : themeManager.getWhite());
+
+        // Update all child components
+        themeManager.applyThemeToContainers(panel);
+
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    // Clean up listener when panel is no longer needed
+    public void dispose() {
+        themeManager.removeThemeChangeListener(this);
     }
 }
