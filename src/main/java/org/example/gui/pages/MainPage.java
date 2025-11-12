@@ -118,7 +118,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             );
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // === STEP 1: CLEAR ActiveSession FROM DATABASE ===
+                // CLEAR ActiveSession FROM DATABASE ===
                 try (Connection conn = DatabaseInstance.getInstance().getConnection();
                      PreparedStatement ps = conn.prepareStatement("DELETE FROM ActiveSession")) {
                     int rows = ps.executeUpdate();
@@ -135,17 +135,16 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                     return; // Stop if DB fails
                 }
 
-                // === STEP 2: RESET UI STATE ===
+                // reset ui state
                 currentLocation.setText("");
                 destination.setText("");
                 clearRouteContainer();
                 setInfoMessage("No chosen route.");
                 refreshSavedRoutesPanel(); // Now shows "No saved routes" for next user
 
-                // === STEP 3: NAVIGATE TO LOGIN PAGE ===
+                // navigate to login page
                 cardChanger.accept("LOGIN");
 
-                // === STEP 4: SHOW SUCCESS MESSAGE (OPTIONAL) ===
                 JOptionPane.showMessageDialog(
                         null,
                         "You have been logged out successfully.",
@@ -155,7 +154,6 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             }
         });
 
-        // === HEADER PANEL (User + Dark Mode) ===
         JPanel header = PanelFactory.create(null, 350, 50,
                 SizeManager.getInstance().getBorderRadiusSmall());
         header.setLayout(new FlowLayout(FlowLayout.CENTER, 30, 20));
@@ -163,7 +161,6 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         header.add(userButton);
         header.add(darkMode);
 
-        // === CONTENT PANEL (Welcome + Inputs) ===
         JPanel contentPanel = PanelFactory.create(
                 themeManager.getYellow(),
                 0, 0,
@@ -173,14 +170,12 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         contentPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
         contentPanel.add(createTextContainer());
 
-        // === WRAPPER TO ALIGN CONTENT TO TOP ===
         JPanel wrapper = PanelFactory.create(null, 0, 0,
                 SizeManager.getInstance().getBorderRadiusSmall());
         wrapper.setLayout(new BorderLayout());
         wrapper.setOpaque(false);
         wrapper.add(contentPanel, BorderLayout.NORTH);
 
-        // === FINAL ASSEMBLY ===
         leftPanel.add(header, BorderLayout.NORTH);
         leftPanel.add(wrapper, BorderLayout.CENTER);
 
@@ -819,7 +814,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         infoPanel.repaint();
     }
 
-    // FIXED: createHorizontalStopsSection - compact with wrapping
+    // createHorizontalStopsSection - compact with wrapping
     private JPanel createHorizontalStopsSection(RouteComponent route) throws IOException, FontFormatException {
         JPanel wrapper = PanelFactory.create(null, 0, 0, 0);
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
@@ -839,7 +834,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         JPanel stopsWrapper = PanelFactory.create(null, 0, 0, 0);
         stopsWrapper.setOpaque(false);
         stopsWrapper.setLayout(new BorderLayout());
-        stopsWrapper.setPreferredSize(new Dimension(850, 0)); // Fixed width forces wrapping
+        stopsWrapper.setPreferredSize(new Dimension(850, 150)); // Fixed width forces wrapping
 
         // Create stops flow that wraps to new line
         JPanel stopsFlow = PanelFactory.create(null, 0, 0, 0);
@@ -1179,7 +1174,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             header.setOpaque(false);
 
             // Change title based on number of segments
-            String titleText = segments.size() == 1 ? "Direct Route" : "Transfer Route (" + segments.size() + " legs)";
+            String titleText = segments.size() == 1 ? "Direct Route" : "Transfer Route";
             JLabel title = new JLabel(titleText);
             title.setFont(loadCustomFont(Fonts.DM_SANS_BOLD, 20f));
             title.setForeground(themeManager.getBlack());
@@ -1209,10 +1204,9 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
             summary.setLayout(new GridLayout(2, 2, 15, 10));
             summary.setOpaque(false);
 
-            summary.add(createInfoItem("Transfers:", String.valueOf(details.getTransfers())));
-            summary.add(createInfoItem("Total Stops:", String.valueOf(details.getTotalStops())));
+            summary.add(createInfoItem("Total Stops:", String.valueOf(details.getTotalStops() + details.getTotalStops())));
             summary.add(createInfoItem("Total Fare:", "Php " + String.format("%.2f", details.getTotalFare())));
-            summary.add(createInfoItem("Segments:", String.valueOf(details.getSegments())));
+            summary.add(createInfoItem("Segments:", String.valueOf(details.getSegments() + details.getSegments())));
 
             summaryWrapper.add(summary, BorderLayout.NORTH);
 
@@ -1233,7 +1227,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
                 mainContent.add(topSection, BorderLayout.NORTH);
                 infoPanel.add(mainContent, BorderLayout.NORTH);
             } else {
-                // For multi-segment routes, show segment panels with scrolling
+
                 JPanel segsContainer = PanelFactory.create(themeManager.getWhite(), 0, 0, 0);
                 segsContainer.setLayout(new BoxLayout(segsContainer, BoxLayout.Y_AXIS));
 
@@ -1343,7 +1337,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
 
         // Segment header
         JLabel segTitle = LabelFactory.create("Segment " + num + ": " + seg.getRoute(),
-                loadCustomFont(Fonts.DM_SANS_BOLD, 16f), themeManager.getBlack()); // Increased from 15f
+                loadCustomFont(Fonts.DM_SANS_BOLD, 15f), themeManager.getBlack());
         segTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(segTitle);
         p.add(Box.createVerticalStrut(8));
@@ -1354,7 +1348,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         routeInfo.setLayout(new BoxLayout(routeInfo, BoxLayout.Y_AXIS));
 
         JLabel fromTo = LabelFactory.create(seg.getFromLocation() + " → " + seg.getDestination(),
-                loadCustomFont(Fonts.DM_SANS_BOLD, 14f), themeManager.getBlack()); // Increased from 13f
+                loadCustomFont(Fonts.DM_SANS_BOLD, 13f), themeManager.getBlack());
         fromTo.setAlignmentX(Component.LEFT_ALIGNMENT);
         routeInfo.add(fromTo);
         routeInfo.add(Box.createVerticalStrut(5));
@@ -1362,7 +1356,7 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         JLabel metrics = LabelFactory.create(
                 String.format("Fare: Php %.2f | Stops: %d | ETA: %d min",
                         seg.getFare(), seg.getStops(), seg.getEta()),
-                loadCustomFont(Fonts.DM_SANS_REGULAR, 13f), // Increased from 12f
+                loadCustomFont(Fonts.DM_SANS_REGULAR, 13f),
                 themeManager.getBlack().brighter());
         metrics.setAlignmentX(Component.LEFT_ALIGNMENT);
         routeInfo.add(metrics);
@@ -1370,50 +1364,68 @@ public class MainPage extends JPanel implements ThemeManager.ThemeChangeListener
         p.add(routeInfo);
         p.add(Box.createVerticalStrut(8));
 
-        // Route stops - HORIZONTAL with wrapping in scroll pane
+        // Route stops header
         JLabel stopsHeader = LabelFactory.create("Stops:",
                 loadCustomFont(Fonts.DM_SANS_BOLD, 14f), themeManager.getBlack());
         stopsHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(stopsHeader);
         p.add(Box.createVerticalStrut(5));
 
-        // Create stops flow panel
-        JPanel stopsFlow = PanelFactory.create(null, 0, 0, 0);
+        // Main stops container (vertical stack of rows)
+        JPanel stopsFlow = new JPanel();
         stopsFlow.setOpaque(false);
-        stopsFlow.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        stopsFlow.setLayout(new BoxLayout(stopsFlow, BoxLayout.Y_AXIS));
+
+        // Create first row
+        JPanel currentRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        currentRow.setOpaque(false);
+        stopsFlow.add(currentRow);
 
         List<String> stops = seg.getRouteStops();
+
+        // Approximate "wrap" logic based on number of stops per row
+        int stopsPerRow = 6; // adjust this for your UI width
         for (int i = 0; i < stops.size(); i++) {
             JLabel stopLabel = LabelFactory.create(
                     stops.get(i),
                     loadCustomFont(Fonts.DM_SANS_REGULAR, 13f),
                     themeManager.getBlack().brighter());
-            stopsFlow.add(stopLabel);
+            currentRow.add(stopLabel);
 
             if (i < stops.size() - 1) {
-                JLabel arrow = LabelFactory.create(" → ",
+                JLabel arrow = LabelFactory.create("→",
                         loadCustomFont(Fonts.DM_SANS_BOLD, 13f),
                         themeManager.getGreen());
-                stopsFlow.add(arrow);
+                currentRow.add(arrow);
+            }
+
+            // Move to new row every few stops
+            if ((i + 1) % stopsPerRow == 0 && i < stops.size() - 1) {
+                currentRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+                currentRow.setOpaque(false);
+                stopsFlow.add(currentRow);
             }
         }
 
-        // Wrap in scroll pane with invisible scrollbar
-        JScrollPane stopsScroll = new JScrollPane(stopsFlow);
+        // Scroll pane that adjusts width automatically and scrolls vertically if needed
+        JScrollPane stopsScroll = new JScrollPane(stopsFlow,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
         stopsScroll.setBorder(BorderFactory.createEmptyBorder());
         stopsScroll.setOpaque(false);
         stopsScroll.getViewport().setOpaque(false);
-        stopsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        stopsScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         stopsScroll.getVerticalScrollBar().setUnitIncrement(16);
-        stopsScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150)); // Max height 150px
+        stopsScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
         stopsScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         p.add(stopsScroll);
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, p.getPreferredSize().height));
 
         return p;
     }
-    //i hate myself
+
+
     // --------------------- SAVED ROUTES ---------------------
     public void setSavedRoutes(RouteComponent route) {
         if (pageManager.addSavedRoute(route)) {

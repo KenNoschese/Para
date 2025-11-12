@@ -14,7 +14,7 @@ public class DatabaseInstance {
     // private final String db = "route_schema";
 
     private String uname = "root";
-    private String pswd = "1234";
+    private String pswd = "Ken11514!";
 
     private static String currentAppUser;
 
