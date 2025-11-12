@@ -5,6 +5,7 @@ import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneySubject
 import org.example.gui.appManager.ThemeManager;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedPanel;
+import org.example.gui.components.dialogs.ErrorDialog;
 import org.example.gui.resources.Fonts;
 
 import javax.swing.*;
@@ -126,7 +127,11 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
         String plateNumber = plateField.getText().trim();
 
         if (plateNumber.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter a plate number first.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            try {
+                ErrorDialog.show(this, "Please enter a plate number first.", "Input Error");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
             return;
         }
 
@@ -145,7 +150,11 @@ public class testPage_deleteLater extends JPanel implements JeepneyObserver {
                 inJeep = false;
             }
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            try {
+                ErrorDialog.show(this, "Database Error: " + ex.getMessage(), "Error");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             ex.printStackTrace();
         }
     }

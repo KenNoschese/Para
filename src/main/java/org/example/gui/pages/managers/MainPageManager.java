@@ -3,6 +3,7 @@ package org.example.gui.pages.managers;
 import org.example.DatabaseManager.RouteDatabase.*;
 import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.appManager.ThemeManager;
+import org.example.gui.components.dialogs.ErrorDialog;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -190,7 +191,7 @@ public class MainPageManager {
         System.out.println("[DEBUG] addSavedRoute() → user_id = " + userId);
 
         if (userId == -1) {
-            JOptionPane.showMessageDialog(null, "Please log in to save routes.", "Login Required", JOptionPane.WARNING_MESSAGE);
+            System.out.println("Please log in to save routes.");
             return false;
         }
 
@@ -209,7 +210,7 @@ public class MainPageManager {
             return rows > 0;
         } catch (SQLException e) {
             System.err.println("[SQL ERROR] Save failed: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, "Error saving route: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("Error saving route: " + e.getMessage());
             return false;
         }
     }

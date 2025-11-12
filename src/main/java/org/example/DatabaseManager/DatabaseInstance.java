@@ -14,12 +14,12 @@ public class DatabaseInstance {
     // private final String db = "route_schema";
 
     private String uname = "root";
-    private String pswd = "Ken11514!";
+    private String pswd = "1234";
 
     private static String currentAppUser;
 
     private static final String JDBC_URL =
-            "jdbc:mysql://127.0.0.1:3306/route_schema?serverTimezone=UTC&allowPublicKeyRetrieval=true";
+            "jdbc:mysql://127.0.0.1:3306/routes_schema?serverTimezone=UTC&allowPublicKeyRetrieval=true";
 
     public static void setLoggedInUser(String username) {
         currentAppUser = username;

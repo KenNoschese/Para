@@ -5,6 +5,8 @@ import org.example.gui.appManager.ThemeManager;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedTextField;
 import org.example.gui.components.base.RoundedPasswordField;
+import org.example.gui.components.dialogs.ErrorDialog;
+import org.example.gui.components.dialogs.SuccessDialog;
 import org.example.gui.resources.Images;
 import org.example.gui.resources.Fonts;
 import org.example.gui.appManager.SizeManager;
@@ -113,12 +115,20 @@ public class SignupPage extends JPanel {
             String confirm = new String(confirmPasswordField.getPassword()).trim();
 
             if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "All fields are required.", "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(this, "All fields are required.", "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
 
             if (!password.equals(confirm)) {
-                JOptionPane.showMessageDialog(this, "Passwords do not match.", "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(this, "Passwords do not match.", "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
 
@@ -127,14 +137,22 @@ public class SignupPage extends JPanel {
             boolean success = new UserManager().signUpUser(username, password);
 
             if (success) {
-                JOptionPane.showMessageDialog(this,
-                        "Account created!\nYou can now log in as: " + username,
-                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                try {
+                    SuccessDialog.show(this,
+                            "Account created!<br>You can now log in as: " + username,
+                            "Success");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 cardChanger.accept("LOGIN");
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Username already exists or DB error.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(this,
+                            "Username already exists or DB error.",
+                            "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         });
 

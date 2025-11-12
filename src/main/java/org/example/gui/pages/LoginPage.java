@@ -4,6 +4,8 @@ import org.example.DatabaseManager.DatabaseInstance;
 import org.example.gui.components.base.RoundedButton;
 import org.example.gui.components.base.RoundedTextField;
 import org.example.gui.components.base.RoundedPasswordField;
+import org.example.gui.components.dialogs.ErrorDialog;
+import org.example.gui.components.dialogs.SuccessDialog;
 import org.example.gui.resources.Fonts;
 import org.example.gui.resources.Images;
 import org.example.gui.appManager.SizeManager;
@@ -123,9 +125,13 @@ public class LoginPage extends JPanel {
             String password = new String(passwordField.getPassword()).trim();
 
             if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Please enter both username and password.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(mainPanel,
+                            "Please enter both username and password.",
+                            "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
 
@@ -134,23 +140,35 @@ public class LoginPage extends JPanel {
             // VALIDATE USING UserAccounts
             int userId = validateLogin(username, password);
             if (userId == -1) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Invalid username or password.",
-                        "Login Failed", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(mainPanel,
+                            "Invalid username or password.",
+                            "Login Failed");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
 
             // CREATE ActiveSession
             if (!insertActiveSession(userId)) {
-                JOptionPane.showMessageDialog(mainPanel,
-                        "Login failed: Could not start session.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(mainPanel,
+                            "Login failed: Could not start session.",
+                            "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
 
-            JOptionPane.showMessageDialog(mainPanel,
-                    "Login successful!\nWelcome, " + username,
-                    "Login Success", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                SuccessDialog.show(mainPanel,
+                        "Login successful!<br>Welcome, " + username,
+                        "Login Success");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
 
             DatabaseInstance.setLoggedInUser(username);
             System.out.println("Connected as: " + username + " (user_id: " + userId + ")");

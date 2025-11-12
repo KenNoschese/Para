@@ -1,6 +1,7 @@
 package org.example.gui;
 
 import org.example.gui.appManager.SizeManager;
+import org.example.gui.components.dialogs.ErrorDialog;
 import org.example.gui.pages.LoginPage;
 import org.example.gui.pages.LandingPage;
 import org.example.gui.pages.MainPage;
@@ -59,10 +60,13 @@ public class MainFrame extends JFrame {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                JOptionPane.showMessageDialog(this,
-                        "Error initializing main page: " + e.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                try {
+                    ErrorDialog.show(this,
+                            "Error initializing main page: " + e.getMessage(),
+                            "Error");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 return;
             }
         }

@@ -84,7 +84,7 @@ public class ConfirmDialog extends JDialog {
 
         add(mainPanel);
 
-        setSize(450, 250);
+        setSize(500, 350);
         setLocationRelativeTo(getOwner());
     }
 
