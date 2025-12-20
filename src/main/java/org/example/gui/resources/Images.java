@@ -7,7 +7,6 @@ public class Images {
     private static Images instance;
     private static final String IMAGES_PATH = "ProjectFiles/";
 
-    // ImageIcon constants
     private static final ImageIcon cityIcon = new ImageIcon(IMAGES_PATH + "City.png");
     private static final ImageIcon jeepIcon = new ImageIcon(IMAGES_PATH + "jeep.png");
     private static final ImageIcon paraLogoIcon = new ImageIcon(IMAGES_PATH + "Para.png");
@@ -15,43 +14,15 @@ public class Images {
     private static final ImageIcon routeImageIcon = new ImageIcon(IMAGES_PATH + "RouteImg.png");
     private static final ImageIcon routeOverviewIcon = new ImageIcon(IMAGES_PATH + "routeov.png");
     private static final ImageIcon placeholderIcon = new ImageIcon(IMAGES_PATH + "nodata.png");
+    private static final ImageIcon citygraphic = new ImageIcon(IMAGES_PATH + "citygraphic.png");
+    private static final ImageIcon citygraphicnight = new ImageIcon(IMAGES_PATH + "citygraphicnight.png");
 
-    // Getters for ImageIcons
     public ImageIcon getCityIcon() {
         return cityIcon;
     }
 
     public ImageIcon getJeepIcon() {
         return jeepIcon;
-    }
-
-    public ImageIcon getParaLogoIcon() {
-        return paraLogoIcon;
-    }
-
-    public ImageIcon getMockupIcon() {
-        return mockupIcon;
-    }
-
-    public ImageIcon getRouteImageIcon() {
-        return routeImageIcon;
-    }
-
-    public ImageIcon getRouteOverviewIcon() {
-        return routeOverviewIcon;
-    }
-
-    public ImageIcon getPlaceholderIcon() {
-        return placeholderIcon;
-    }
-
-    // Getters for scaled JLabels
-    public JLabel getCityLabel(int width, int height) {
-        return createImageLabel(cityIcon, width, height);
-    }
-
-    public JLabel getJeepLabel(int width, int height) {
-        return createImageLabel(jeepIcon, width, height);
     }
 
     public JLabel getParaLogoLabel(int width, int height) {
@@ -74,6 +45,14 @@ public class Images {
         return createImageLabel(placeholderIcon, width, height);
     }
 
+    public JLabel getCityGraphic(int width, int height) {
+        return createImageLabel(citygraphic, width, height);
+    }
+
+    public JLabel getCityGraphicNight(int width, int height) {
+        return createImageLabel(citygraphicnight, width, height);
+    }
+
     private JLabel createImageLabel(ImageIcon icon, int width, int height) {
         JLabel label = new JLabel(getScaledIcon(icon, width, height), SwingConstants.CENTER);
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -84,15 +63,6 @@ public class Images {
         if (icon == null) return null;
         Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
         return new ImageIcon(img);
-    }
-
-    private ImageIcon createScaledImage(ImageIcon icon, int width, int height) {
-        if (icon == null) {
-            System.err.println("Icon is null");
-            return null;
-        }
-        Image scaledImage = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaledImage);
     }
 
     public static Images getInstance() {

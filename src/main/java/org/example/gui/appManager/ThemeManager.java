@@ -3,6 +3,7 @@ package org.example.gui.appManager;
 import java.awt.*;
 import java.util.*;
 import javax.swing.*;
+import javax.swing.border.Border;
 
 public class ThemeManager {
     private static ThemeManager instance;
@@ -91,38 +92,80 @@ public class ThemeManager {
         comp.setForeground(getForegroundColor());
 
         if (comp instanceof JComponent jcomp) {
-            if (jcomp instanceof JButton || jcomp instanceof JTextField ||
-                    jcomp instanceof JComboBox || jcomp instanceof JList) {
+            // Store the original border if it has padding
+            Border currentBorder = jcomp.getBorder();
+
+            if (jcomp instanceof JButton) {
+                jcomp.setBackground(getComponentsColor());
+                // Preserve empty borders (padding)
+                if (currentBorder instanceof javax.swing.border.EmptyBorder) {
+                    jcomp.setBorder(currentBorder);
+                } else if (!(currentBorder instanceof javax.swing.border.EmptyBorder)) {
+                    jcomp.setBorder(BorderFactory.createLineBorder(getGray()));
+                }
+            }
+            else if (jcomp instanceof JTextField) {
+                jcomp.setBackground(getComponentsColor());
+                jcomp.setForeground(getForegroundColor());
+                // Preserve the border for text fields
+                if (currentBorder != null) {
+                    jcomp.setBorder(currentBorder);
+                }
+            }
+            else if (jcomp instanceof JComboBox || jcomp instanceof JList) {
                 jcomp.setBackground(getComponentsColor());
                 jcomp.setBorder(BorderFactory.createLineBorder(getGray()));
             }
             else if (jcomp instanceof JLabel) {
                 jcomp.setForeground(getForegroundColor());
             }
+            else if (jcomp instanceof JTable table) {
+                table.setBackground(getWhite());
+                table.setForeground(getBlack());
+                table.setSelectionBackground(getYellow());
+                table.setSelectionForeground(getBlack());
+                table.setGridColor(getWhite());
+            }
             else if (jcomp instanceof JPanel) {
                 Color bg = jcomp.getBackground();
 
-                if (bg.equals(lightYellow) || bg.equals(darkYellow)) {
-                    jcomp.setBackground(getYellow());
-                }
-                else if (bg.equals(lightBlue) || bg.equals(darkBlue)) {
-                    jcomp.setBackground(getBlue());
-                }
-                else if (bg.equals(lightGreen) || bg.equals(darkGreen)) {
-                    jcomp.setBackground(getGreen());
-                }
-                else if (bg.equals(lightPink) || bg.equals(darkPink)) {
-                    jcomp.setBackground(getPink());
-                }
-                else if (bg.equals(lightRed) || bg.equals(darkRed)) {
-                    jcomp.setBackground(getRed());
-                }
-                else if (bg.equals(lightGray) || bg.equals(darkGray)) {
-                    jcomp.setBackground(getGray());
-                }
-                else if (bg.equals(lightBackground) || bg.equals(darkBackground) ||
-                        bg.equals(lightComponents) || bg.equals(darkComponents)) {
-                    jcomp.setBackground(getBackgroundColor());
+                // Check for theme color properties
+                Object themeColorProp = jcomp.getClientProperty("themeColor");
+                if (themeColorProp instanceof String themeColor) {
+                    switch (themeColor) {
+                        case "yellow" -> jcomp.setBackground(getYellow());
+                        case "blue" -> jcomp.setBackground(getBlue());
+                        case "green" -> jcomp.setBackground(getGreen());
+                        case "pink" -> jcomp.setBackground(getPink());
+                        case "red" -> jcomp.setBackground(getRed());
+                        case "gray" -> jcomp.setBackground(getGray());
+                        case "white" -> jcomp.setBackground(getWhite());
+                        case "black" -> jcomp.setBackground(getBlack());
+                    }
+                } else {
+                    // Fallback to color matching
+                    if (bg.equals(lightYellow) || bg.equals(darkYellow)) {
+                        jcomp.setBackground(getYellow());
+                    }
+                    else if (bg.equals(lightBlue) || bg.equals(darkBlue)) {
+                        jcomp.setBackground(getBlue());
+                    }
+                    else if (bg.equals(lightGreen) || bg.equals(darkGreen)) {
+                        jcomp.setBackground(getGreen());
+                    }
+                    else if (bg.equals(lightPink) || bg.equals(darkPink)) {
+                        jcomp.setBackground(getPink());
+                    }
+                    else if (bg.equals(lightRed) || bg.equals(darkRed)) {
+                        jcomp.setBackground(getRed());
+                    }
+                    else if (bg.equals(lightGray) || bg.equals(darkGray)) {
+                        jcomp.setBackground(getGray());
+                    }
+                    else if (bg.equals(lightBackground) || bg.equals(darkBackground) ||
+                            bg.equals(lightComponents) || bg.equals(darkComponents)) {
+                        jcomp.setBackground(getBackgroundColor());
+                    }
                 }
             }
         }
@@ -141,7 +184,7 @@ public class ThemeManager {
         return isDark ? darkComponents : lightComponents;
     }
     public Color getWhite() {
-        return isDark ? darkForeground : lightComponents;
+        return isDark ? darkComponents : lightComponents;
     }
     public Color getBlack() {
         return isDark ? darkForeground : lightForeground;
@@ -166,6 +209,11 @@ public class ThemeManager {
     }
     public Color getPanelColor() {
         return isDark ? darkPanelColor : lightComponents;
+    }
+
+    // New method for getting hover colors
+    public Color getHoverColor() {
+        return isDark ? darkYellow.brighter() : lightYellow.brighter();
     }
 
     public interface ThemeChangeListener {

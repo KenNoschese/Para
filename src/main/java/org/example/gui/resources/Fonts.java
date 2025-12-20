@@ -4,7 +4,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
-public class fonts {
+public class Fonts {
     public static final String DM_SANS_REGULAR = "ProjectFiles/DMSans.ttf";
     public static final String DM_SANS_BOLD = "ProjectFiles/DMSansBold.ttf";
     public static final String DM_SANS_ITALIC = "ProjectFiles/DMSansItalic.ttf";

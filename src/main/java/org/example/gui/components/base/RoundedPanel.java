@@ -1,12 +1,12 @@
-package org.example.gui.components;
+package org.example.gui.components.base;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class RoundingOfPanels extends JPanel {
+public class RoundedPanel extends JPanel {
     private final int radius;
 
-    public RoundingOfPanels(int radius) {
+    public RoundedPanel(int radius) {
         this.radius = radius;
         setOpaque(false);
     }

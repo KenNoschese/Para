@@ -1,184 +1,272 @@
+// RouteManager.java — FIXED: NO CACHED CONNECTION
 package org.example.DatabaseManager.RouteDatabase;
 
 import org.example.DatabaseManager.DatabaseInstance;
-import org.example.DatabaseManager.RouteDatabase.RouteComponent;
-import org.example.DatabaseManager.RouteDatabase.Routes;
-import org.example.DatabaseManager.RouteDatabase.Segments;
-import org.example.gui.resources.RouteData;
+import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneyObserver;
+import org.example.DatabaseManager.RouteDatabase.ObserversClasses.JeepneySubject;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * Manages route queries using the Composite Pattern.
+ * NO CACHED CONNECTION — ALWAYS FRESH
+ */
 public class RouteManager {
-    private final Connection con;
 
-    public RouteManager() {
-        this.con = DatabaseInstance.getInstance().getConnection();
+    private final JeepneySubject jeepneySubject = new JeepneySubject();
+
+    // ──────────────────────────────────────────────────────────────
+    // SAFE DB READERS
+    // ──────────────────────────────────────────────────────────────
+    @SuppressWarnings("unused")
+    private static double getDoubleSafe(ResultSet rs, String column) throws SQLException {
+        Object obj = rs.getObject(column);
+        return obj == null ? 0.0 : ((Number) obj).doubleValue();
     }
 
-    public ArrayList<RouteData> findRoutes(String from, String to, String category) throws SQLException {
-        ArrayList<RouteData> routes = new ArrayList<>();
+    private static int getIntSafe(ResultSet rs, String column) throws SQLException {
+        Object obj = rs.getObject(column);
+        return obj == null ? 0 : ((Number) obj).intValue();
+    }
 
-        boolean isInbound = detectDirection(from, to);
+    /* ====================== OBSERVER MANAGEMENT ====================== */
+    public void addJeepneyObserver(JeepneyObserver observer) {
+        if (observer != null) jeepneySubject.registerObserver(observer);
+    }
 
+    public void boardJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.boardJeepney(plateNumber);
+    }
+
+    public void leaveJeepney(String plateNumber) throws SQLException {
+        jeepneySubject.leaveJeepney(plateNumber);
+    }
+
+    public void showAllJeepneys() throws SQLException {
+        jeepneySubject.showAllJeepneys();
+    }
+
+    /* ====================== UTILITIES ====================== */
+    private String normalize(String input) {
+        return input == null ? "" : input.trim().toLowerCase();
+    }
+
+    /* ====================== JEEPNEY INFO ====================== */
+    // RouteManager.java — FINAL & BULLETPROOF
+    public ArrayList<JeepneyInfo> getJeepneysForRoute(String routeName) throws SQLException {
+        ArrayList<JeepneyInfo> jeepneys = new ArrayList<>();
         String sql = """
-            SELECT 
-                r.route_id,
-                r.route_name,
-                rs_from.stop_order AS from_order,
-                rs_to.stop_order AS to_order,
-                ABS(rs_to.stop_order - rs_from.stop_order) AS distance_km,
-                r.base_fare,
-                r.base_distance_km,
-                r.per_km_rate,
-                (
-                    SELECT COUNT(*) 
-                    FROM Route_Stops rs_mid
-                    WHERE rs_mid.route_id = r.route_id
-                      AND rs_mid.stop_order BETWEEN 
-                          LEAST(rs_from.stop_order, rs_to.stop_order)
-                          AND GREATEST(rs_from.stop_order, rs_to.stop_order)
-                ) AS stops
-            FROM Routes r
-            JOIN Route_Stops rs_from ON r.route_id = rs_from.route_id
-            JOIN Stops s_from ON rs_from.stop_id = s_from.stop_id
-            JOIN Route_Stops rs_to ON r.route_id = rs_to.route_id
-            JOIN Stops s_to ON rs_to.stop_id = s_to.stop_id
-            WHERE s_from.stop_name = ?
-              AND s_to.stop_name = ?
-              AND (
-                  ( ? = TRUE  AND rs_to.stop_order = (
-                      SELECT MIN(rs_to2.stop_order)
-                      FROM Route_Stops rs_to2
-                      JOIN Stops s_to2 ON rs_to2.stop_id = s_to2.stop_id
-                      WHERE rs_to2.route_id = r.route_id
-                        AND s_to2.stop_name = s_to.stop_name
-                        AND rs_to2.stop_order > rs_from.stop_order
-                  ))
-                  OR
-                  ( ? = FALSE AND rs_to.stop_order = (
-                      SELECT MAX(rs_to2.stop_order)
-                      FROM Route_Stops rs_to2
-                      JOIN Stops s_to2 ON rs_to2.stop_id = s_to2.stop_id
-                      WHERE rs_to2.route_id = r.route_id
-                        AND s_to2.stop_name = s_to.stop_name
-                        AND rs_to2.stop_order < rs_from.stop_order
-                  ))
-              )
-            GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order;
+        SELECT j.jeepney_id, j.plate_number, j.capacity, j.current_passengers,
+               r.route_id, r.route_name
+        FROM Jeepneys j
+        JOIN Routes r ON j.route_id = r.route_id
+        WHERE LOWER(r.route_name) = ?
+        ORDER BY j.current_passengers ASC;
         """;
 
+        // READ ALL DATA BEFORE CLOSING
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
 
-
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
-            pst.setString(1, from);
-            pst.setString(2, to);
-            pst.setBoolean(3, isInbound);
-            pst.setBoolean(4, isInbound);
-
+            pst.setString(1, normalize(routeName));
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
-                    int routeId = rs.getInt("route_id");
-                    String routeName = rs.getString("route_name");
-                    double distanceKm = rs.getDouble("distance_km");
-//                  int eta = rs.getInt("total_eta_minutes");
-                    int stops = rs.getInt("stops");
-
-                    double baseFare = rs.getDouble("base_fare");
-                    double baseDist = rs.getDouble("base_distance_km");
-                    double perKmRate = rs.getDouble("per_km_rate");
-
-                    // ✅ Fare calculation
-                    double fare = baseFare;
-                    if (distanceKm > baseDist) {
-                        fare += (distanceKm - baseDist) * perKmRate;
-                    }
-                    if (fare < 12.0) fare = 12.0;
-
-                    double discount = getDiscountRate(category);
-                    double finalFare = fare * (1 - discount);
-
-                    ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
-
-                    Routes routeComposite = new Routes(routeName);
-                    Segments segment = new Segments(from, to, distanceKm, finalFare);
-                    routeComposite.addSegment(segment);
-
-                    RouteData data = new RouteData();
-                    data.setRoute(routeName);
-                    data.setFromLocation(from);
-                    data.setDestination(to);
-                    data.setStops(stops);
-//                  data.setETA(eta);
-                    data.setDistance((int) distanceKm);
-                    data.setFare(finalFare);
-                    data.setDetails(category);
-                    data.setRoute_stops(stopNames);
-
-                    routes.add(data);
+                    // Extract ALL data HERE
+                    jeepneys.add(new JeepneyInfo(
+                            getIntSafe(rs, "jeepney_id"),
+                            rs.getString("plate_number"),
+                            getIntSafe(rs, "capacity"),
+                            getIntSafe(rs, "current_passengers"),
+                            getIntSafe(rs, "route_id"),
+                            rs.getString("route_name")
+                    ));
                 }
             }
         }
+        return jeepneys; // ← Safe: data already in memory
+    }
 
-        return routes;
+    public int getJeepneyCountForRoute(String routeName) throws SQLException {
+        String sql = """
+            SELECT COUNT(*) AS cnt
+            FROM Jeepneys j
+            JOIN Routes r ON j.route_id = r.route_id
+            WHERE LOWER(r.route_name) = ?
+            """;
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setString(1, normalize(routeName));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() ? getIntSafe(rs, "cnt") : 0;
+            }
+        }
+    }
+
+    public static class JeepneyInfo {
+        private final int jeepneyId, capacity, currentPassengers, routeId;
+        private final String plateNumber, routeName;
+
+        public JeepneyInfo(int jeepneyId, String plateNumber, int capacity,
+                           int currentPassengers, int routeId, String routeName) {
+            this.jeepneyId = jeepneyId;
+            this.plateNumber = plateNumber;
+            this.capacity = capacity;
+            this.currentPassengers = currentPassengers;
+            this.routeId = routeId;
+            this.routeName = routeName;
+        }
+
+        public int getJeepneyId() { return jeepneyId; }
+        public String getPlateNumber() { return plateNumber; }
+        public int getCapacity() { return capacity; }
+        public int getCurrentPassengers() { return currentPassengers; }
+        public int getRouteId() { return routeId; }
+        public String getRouteName() { return routeName; }
+        public int getAvailableSeats() { return capacity - currentPassengers; }
+        public boolean isFull() { return currentPassengers >= capacity; }
+        public double getOccupancyPercentage() {
+            return capacity > 0 ? (currentPassengers * 100.0) / capacity : 0.0;
+        }
+    }
+
+    /* ====================== COMPOSITE: DIRECT LEG ====================== */
+    private Segments createSegment(String from, String to) throws SQLException {
+        from = normalize(from);
+        to   = normalize(to);
+
+        boolean outbound = detectDirection(from, to);
+        String sql = """
+        SELECT r.route_id, r.route_name,
+               ABS(rs_to.stop_order - rs_from.stop_order) AS distance_km,
+               r.base_fare, r.base_distance_km, r.per_km_rate,
+               (SELECT COUNT(*) FROM Route_Stops rs_mid
+                  WHERE rs_mid.route_id = r.route_id
+                    AND rs_mid.stop_order BETWEEN
+                        LEAST(rs_from.stop_order, rs_to.stop_order)
+                        AND GREATEST(rs_from.stop_order, rs_to.stop_order)
+               ) AS stops
+        FROM Routes r
+        JOIN Route_Stops rs_from ON r.route_id = rs_from.route_id
+        JOIN Stops s_from ON rs_from.stop_id = s_from.stop_id
+        JOIN Route_Stops rs_to   ON r.route_id = rs_to.route_id
+        JOIN Stops s_to   ON rs_to.stop_id = s_to.stop_id
+        WHERE LOWER(s_from.stop_name) = LOWER(?)
+          AND LOWER(s_to.stop_name)   = LOWER(?)
+          AND ((? = TRUE  AND rs_from.stop_order < rs_to.stop_order) OR
+               (? = FALSE AND rs_from.stop_order > rs_to.stop_order))
+        GROUP BY r.route_id, r.route_name, rs_from.stop_order, rs_to.stop_order
+        ORDER BY stops ASC, r.route_id ASC
+        LIMIT 1;
+        """;
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setString(1, from);
+            pst.setString(2, to);
+            pst.setBoolean(3, outbound);
+            pst.setBoolean(4, outbound);
+
+            try (ResultSet rs = pst.executeQuery()) {
+                if (!rs.next()) return null;
+
+                int routeId      = rs.getInt("route_id");
+                String routeName = rs.getString("route_name");
+                double distKm    = rs.getDouble("distance_km");
+                int stops        = rs.getInt("stops");
+                double baseFare  = rs.getDouble("base_fare");
+                double baseDist  = rs.getDouble("base_distance_km");
+                double perKmRate = rs.getDouble("per_km_rate");
+
+                double fare = baseFare;
+                if (distKm > baseDist) fare += (distKm - baseDist) * perKmRate;
+                if (fare < 12.0) fare = 12.0;
+
+                int eta = (int) Math.ceil(distKm * 3);
+
+                ArrayList<String> stopNames = getAllStopsForRoute(routeId, from, to);
+
+                return new Segments(from, to, routeName, "Regular", stopNames, stops, eta, (int) distKm, fare);
+            }
+        }
     }
 
     private boolean detectDirection(String from, String to) {
-        String dirQuery = """
-            SELECT rs_from.stop_order AS from_order, rs_to.stop_order AS to_order
+        String sql = """
+            SELECT (rs_from.stop_order < rs_to.stop_order) AS is_outbound
             FROM Route_Stops rs_from
-            JOIN Stops s_from ON rs_from.stop_id = s_from.stop_id
+            JOIN Stops sf ON rs_from.stop_id = sf.stop_id
             JOIN Route_Stops rs_to ON rs_from.route_id = rs_to.route_id
-            JOIN Stops s_to ON rs_to.stop_id = s_to.stop_id
-            WHERE s_from.stop_name = ? AND s_to.stop_name = ?
+            JOIN Stops st ON rs_to.stop_id = st.stop_id
+            WHERE LOWER(sf.stop_name) = LOWER(?)
+              AND LOWER(st.stop_name) = LOWER(?)
             LIMIT 1;
-        """;
+            """;
 
-        try (PreparedStatement pst = con.prepareStatement(dirQuery)) {
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
             pst.setString(1, from);
             pst.setString(2, to);
-            ResultSet rs = pst.executeQuery();
-            if (rs.next()) {
-                int fromOrder = rs.getInt("from_order");
-                int toOrder = rs.getInt("to_order");
-                return fromOrder < toOrder;
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getBoolean("is_outbound");
             }
         } catch (SQLException e) {
-            System.out.println("⚠️ Direction detection failed: " + e.getMessage());
+            System.out.println("[WARN] Direction detection failed: " + e.getCause());
         }
         return true;
     }
 
     private ArrayList<String> getAllStopsForRoute(int routeId, String from, String to) throws SQLException {
+        from = normalize(from);
+        to   = normalize(to);
         ArrayList<String> stops = new ArrayList<>();
 
-        String stopQuery = """
-            SELECT s.stop_name
-            FROM Route_Stops rs
-            JOIN Stops s ON rs.stop_id = s.stop_id
-            WHERE rs.route_id = ?
-              AND rs.stop_order BETWEEN 
-                  (SELECT rsf.stop_order 
-                   FROM Route_Stops rsf 
-                   JOIN Stops sf ON rsf.stop_id = sf.stop_id 
-                   WHERE rsf.route_id = ? AND sf.stop_name = ?
-                   LIMIT 1) 
-              AND 
-                  (SELECT rst.stop_order 
-                   FROM Route_Stops rst 
-                   JOIN Stops st ON rst.stop_id = st.stop_id 
-                   WHERE rst.route_id = ? AND st.stop_name = ?
-                   LIMIT 1)
-            ORDER BY rs.stop_order;
-        """;
-
-        try (PreparedStatement pst = con.prepareStatement(stopQuery)) {
+        // Get fromOrder
+        int fromOrder = -1;
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(
+                     "SELECT stop_order FROM Route_Stops rs JOIN Stops s ON rs.stop_id = s.stop_id WHERE rs.route_id = ? AND LOWER(s.stop_name) = LOWER(?)")) {
             pst.setInt(1, routeId);
-            pst.setInt(2, routeId);
-            pst.setString(3, from);
-            pst.setInt(4, routeId);
-            pst.setString(5, to);
+            pst.setString(2, from);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) fromOrder = getIntSafe(rs, "stop_order");
+            }
+        }
 
+        // Get toOrder
+        int toOrder = -1;
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(
+                     "SELECT stop_order FROM Route_Stops rs JOIN Stops s ON rs.stop_id = s.stop_id WHERE rs.route_id = ? AND LOWER(s.stop_name) = LOWER(?)")) {
+            pst.setInt(1, routeId);
+            pst.setString(2, to);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) toOrder = getIntSafe(rs, "stop_order");
+            }
+        }
+
+        if (fromOrder == -1 || toOrder == -1) return stops;
+
+        boolean asc = fromOrder < toOrder;
+        String stopSql = """
+        SELECT s.stop_name
+        FROM Route_Stops rs
+        JOIN Stops s ON rs.stop_id = s.stop_id
+        WHERE rs.route_id = ?
+          AND rs.stop_order BETWEEN ? AND ?
+        ORDER BY rs.stop_order %s;
+        """.formatted(asc ? "" : "DESC");
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(stopSql)) {
+            pst.setInt(1, routeId);
+            pst.setInt(2, Math.min(fromOrder, toOrder));
+            pst.setInt(3, Math.max(fromOrder, toOrder));
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
                     stops.add(rs.getString("stop_name"));
@@ -188,11 +276,75 @@ public class RouteManager {
         return stops;
     }
 
-    private double getDiscountRate(String category) {
-        if (category == null) return 0.0;
-        return switch (category.toLowerCase()) {
-            case "student", "pwd", "senior citizen" -> 0.20;
-            default -> 0.0;
-        };
+    /* ====================== COMPOSITE: FULL ROUTES ====================== */
+    public ArrayList<RouteComponent> findRoutesWithTransfers(String from, String to) throws SQLException {
+        from = normalize(from);
+        to   = normalize(to);
+        ArrayList<RouteComponent> allRoutes = new ArrayList<>();
+
+        // === Direct Route ===
+        Segments direct = createSegment(from, to);
+        if (direct != null) {
+            Routes route = new Routes(direct.getRoute() + " (Direct)");
+            route.addSegment(direct);
+            allRoutes.add(route);
+        }
+
+        // === STEP 1: READ ALL TRANSFER DATA INTO MEMORY ===
+        class TransferInfo {
+            final String transferStop;
+
+            TransferInfo(int fromRouteId, int toRouteId, String transferStop) {
+                // Route IDs stored but only transferStop is used
+                this.transferStop = transferStop;
+            }
+        }
+
+        List<TransferInfo> transfers = new ArrayList<>();
+        String sql = """
+        SELECT DISTINCT tp.from_route_id, tp.to_route_id, s.stop_name AS transfer_stop
+        FROM Transfer_Points tp
+        JOIN Stops s ON tp.stop_id = s.stop_id
+        JOIN Route_Stops rs_from ON rs_from.route_id = tp.from_route_id
+        JOIN Stops sf ON rs_from.stop_id = sf.stop_id AND LOWER(sf.stop_name) = LOWER(?)
+        JOIN Route_Stops rs_t1   ON rs_t1.route_id   = tp.from_route_id AND rs_t1.stop_id   = s.stop_id
+        JOIN Route_Stops rs_to   ON rs_to.route_id   = tp.to_route_id
+        JOIN Stops st ON rs_to.stop_id = st.stop_id AND LOWER(st.stop_name) = LOWER(?)
+        JOIN Route_Stops rs_t2   ON rs_t2.route_id   = tp.to_route_id   AND rs_t2.stop_id   = s.stop_id
+        WHERE tp.from_route_id != tp.to_route_id
+          AND rs_from.stop_order < rs_t1.stop_order
+          AND rs_t2.stop_order   < rs_to.stop_order;
+        """;
+
+        try (Connection conn = DatabaseInstance.getInstance().getConnection();
+             PreparedStatement pst = conn.prepareStatement(sql)) {
+
+            pst.setString(1, from);
+            pst.setString(2, to);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    transfers.add(new TransferInfo(
+                            rs.getInt("from_route_id"),
+                            rs.getInt("to_route_id"),
+                            rs.getString("transfer_stop")
+                    ));
+                }
+            }
+        }
+
+        // === STEP 2: NOW PROCESS EACH TRANSFER SAFELY ===
+        for (TransferInfo ti : transfers) {
+            Segments leg1 = createSegment(from, ti.transferStop);
+            Segments leg2 = createSegment(ti.transferStop, to);
+
+            if (leg1 != null && leg2 != null) {
+                Routes route = new Routes(from + " to " + to + " via " + ti.transferStop);
+                route.addSegment(leg1);
+                route.addSegment(leg2);
+                allRoutes.add(route);
+            }
+        }
+
+        return allRoutes;
     }
 }

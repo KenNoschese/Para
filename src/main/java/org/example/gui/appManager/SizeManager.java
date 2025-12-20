@@ -5,9 +5,9 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class sizeManager {
+public class SizeManager {
     // Singleton instance
-    private static final sizeManager instance = new sizeManager();
+    private static final SizeManager instance = new SizeManager();
 
     // List to track components affected by size changes
     private final List<Component> registeredComponents = new ArrayList<>();
@@ -44,10 +44,10 @@ public class sizeManager {
     private static final int BORDER_RADIUS_SMALL = 20;
 
     // Private constructor for singleton
-    private sizeManager() {}
+    private SizeManager() {}
 
     // Get singleton instance
-    public static sizeManager getInstance() {
+    public static SizeManager getInstance() {
         return instance;
     }
 

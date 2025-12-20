@@ -1,7 +1,6 @@
 package org.example;
 
 import org.example.gui.MainFrame;
-import org.example.gui.pages.loginPage;
 
 import java.awt.*;
 import java.io.IOException;
